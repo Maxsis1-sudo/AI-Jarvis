@@ -4,15 +4,10 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f2f5f2",
+  "background_color": "#ffffff",
   "theme_color": "#00843d",
-  "description": "Záznam meetingu, rozlišení řečníků, manažerské shrnutí, úkoly a follow-up e-mail.",
+  "description": "Mobilní meeting assistant: nahrávání, lokální přepis, stručný meeting brief, úkoly, historie a Outlook follow-up bez externího API.",
   "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
   ]
 }
