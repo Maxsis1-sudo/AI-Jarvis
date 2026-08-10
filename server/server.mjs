@@ -14,11 +14,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, 'public');
 
-if (!process.env.OPENAI_API_KEY) {
-  console.warn('OPENAI_API_KEY is not set. /process-meeting will fail until it is configured.');
+let openaiClient = null;
+function getOpenAIClient() {
+  const apiKey = String(process.env.OPENAI_API_KEY || '').trim();
+  if (!apiKey) {
+    throw new Error('Server is missing OPENAI_API_KEY. Add it in Render Environment settings.');
+  }
+  if (!openaiClient) openaiClient = new OpenAI({ apiKey });
+  return openaiClient;
 }
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('OPENAI_API_KEY is not set yet. Server will still start; AI processing will remain disabled until the key is added.');
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 150 * 1024 * 1024 }
@@ -50,15 +59,16 @@ app.get('/health', (_req, res) => {
   res.json({
     ok: true,
     service: 'HOPI Meeting Assistant API',
-    aiConfigured: Boolean(process.env.OPENAI_API_KEY)
+    aiConfigured: Boolean(String(process.env.OPENAI_API_KEY || '').trim()),
+    summaryModel
   });
 });
 
 app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Missing audio file.' });
-    if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Server is missing OPENAI_API_KEY.' });
 
+    const client = getOpenAIClient();
     const filename = req.file.originalname || 'meeting.webm';
     const mime = req.file.mimetype || 'audio/webm';
     const audioFile = new File([req.file.buffer], filename, { type: mime });
@@ -104,7 +114,12 @@ app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (re
     ).join('\n');
 
     const meetingName = String(req.body.meetingName || 'Meeting');
-    const summary = await summarizeMeeting({ meetingName, transcriptForSummary, speakerIds: speakers.map(s => s.id) });
+    const summary = await summarizeMeeting({
+      client,
+      meetingName,
+      transcriptForSummary,
+      speakerIds: speakers.map(s => s.id)
+    });
 
     res.json({
       duration: Number(transcription.duration || 0),
@@ -113,12 +128,12 @@ app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (re
       summary
     });
   } catch (error) {
-    console.error(error);
+    console.error('Meeting processing failed:', error);
     res.status(500).json({ error: error?.message || 'Meeting processing failed.' });
   }
 });
 
-async function summarizeMeeting({ meetingName, transcriptForSummary, speakerIds }) {
+async function summarizeMeeting({ client, meetingName, transcriptForSummary, speakerIds }) {
   const instructions = `
 Jsi KAM meeting assistant pro logistickou společnost HOPI.
 Z přepisu vytvoř pouze stručný manažerský výstup v češtině. Neopisuj schůzku slovo od slova.
@@ -175,6 +190,7 @@ app.use(express.static(publicDir, {
   maxAge: '1h'
 }));
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`HOPI Meeting Assistant listening on port ${port}`);
+  console.log(`AI configured: ${Boolean(String(process.env.OPENAI_API_KEY || '').trim())}`);
 });
