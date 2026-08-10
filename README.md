@@ -2,6 +2,8 @@
 
 Web/PWA aplikace pro iPhone a desktop: meeting → rozpoznání řečníků → pojmenování → stručný KAM brief → follow-up e-mail.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Maxsis1-sudo/AI-Jarvis)
+
 ## Co umí frontend
 
 1. Nahraje audio z meetingu.
@@ -19,11 +21,15 @@ GitHub Pages slouží jako okamžitě použitelný demo/lokální režim. Na prv
 
 Repozitář obsahuje `render.yaml`, který nasadí frontend i backend jako jednu Render web service.
 
-Při vytvoření Render Blueprintu stačí zadat jediný tajný údaj:
+### Nejrychlejší nasazení
 
-- `OPENAI_API_KEY`
-
-Klíč se nikdy neukládá do GitHubu ani do frontendu.
+1. Klikni na **Deploy to Render** nahoře.
+2. Přihlas se do Renderu a povol přístup k repozitáři `Maxsis1-sudo/AI-Jarvis`, pokud o něj Render požádá.
+3. Render načte `render.yaml` a zobrazí web service `hopi-meeting-assistant`.
+4. Do tajné proměnné `OPENAI_API_KEY` vlož vlastní OpenAI API secret key. Klíč nikomu neposílej a nikdy ho neukládej do GitHubu.
+5. Spusť deployment.
+6. Po dokončení otevři přidělenou `.onrender.com` adresu. Endpoint `/health` musí vrátit `aiConfigured: true`.
+7. Proveď krátký test se dvěma řečníky a ověř: Řečník 1/2 → pojmenování → meeting brief.
 
 Po nasazení Render verze frontend automaticky používá AI API na stejné doméně. Není potřeba ručně nastavovat URL backendu.
 
@@ -36,6 +42,10 @@ Po nasazení Render verze frontend automaticky používá AI API na stejné dom�
 - server vrací speaker segments + strukturovaný JSON meeting brief
 
 Backend má health endpoint `/health`, omezení velikosti uploadu a základní hodinový rate limit.
+
+## OpenAI API
+
+ChatGPT Plus a OpenAI API mají oddělené účtování. Pro produkční AI režim je potřeba aktivní API účet s vlastním API klíčem a API billingem.
 
 ## Bezpečnost
 
