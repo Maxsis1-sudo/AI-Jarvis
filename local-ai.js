@@ -56,10 +56,30 @@
 
     const style = document.createElement('style');
     style.textContent = `
-      .local-ai-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.local-ai-head h3{margin-top:0}.ai-support{font-size:12px;line-height:1.45;margin:10px 0 12px;padding:10px 12px;border-radius:12px;background:#f3f7f4;color:#476052}.ai-support.ok{background:#eaf5ee;color:#176234}.ai-support.bad{background:#fff3ed;color:#8a4e2b}.ai-toggle{margin-top:10px}.ai-footnote{font-size:10px!important;color:#7b867f!important;line-height:1.45!important;margin:10px 0 0!important}.ai-progress-wrap{margin:12px 0}.hidden-ai{display:none!important}.ai-progress-row{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#58665d;margin-bottom:7px}.ai-progress{height:8px;background:#e6ece8;border-radius:999px;overflow:hidden}.ai-progress i{display:block;height:100%;width:0;background:#00843d;border-radius:inherit;transition:width .2s}.status-chip[data-tone="amber"]{background:#fff4db;color:#72591b}.status-chip[data-tone="red"]{background:#fff0ee;color:#a43c31}.brief-ai-note{display:flex;align-items:center;gap:8px;font-size:11px;color:#176234;background:#eaf5ee;border-radius:12px;padding:9px 11px;margin:0 0 10px}.process-ai-progress{margin-top:14px;width:min(320px,100%);margin-left:auto;margin-right:auto}`;
+      .local-ai-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.local-ai-head h3{margin-top:0}.ai-support{font-size:12px;line-height:1.45;margin:10px 0 12px;padding:10px 12px;border-radius:12px;background:#f3f7f4;color:#476052}.ai-support.ok{background:#eaf5ee;color:#176234}.ai-support.bad{background:#fff3ed;color:#8a4e2b}.ai-toggle{margin-top:10px}.ai-footnote{font-size:10px!important;color:#7b867f!important;line-height:1.45!important;margin:10px 0 0!important}.ai-progress-wrap{margin:12px 0}.hidden-ai{display:none!important}.ai-progress-row{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#58665d;margin-bottom:7px}.ai-progress{height:8px;background:#e6ece8;border-radius:999px;overflow:hidden}.ai-progress i{display:block;height:100%;width:0;background:#00843d;border-radius:inherit;transition:width .2s}.status-chip[data-tone="amber"]{background:#fff4db;color:#72591b}.status-chip[data-tone="red"]{background:#fff0ee;color:#a43c31}.brief-ai-note{display:flex;align-items:center;gap:8px;font-size:11px;color:#176234;background:#eaf5ee;border-radius:12px;padding:9px 11px;margin:0 0 10px}.process-ai-progress{margin-top:14px;width:min(320px,100%);margin-left:auto;margin-right:auto}.local-ai-home{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#eef8f2;border:1px solid #cfe7d8;border-radius:15px;padding:12px 13px;margin:12px 0}.local-ai-home strong{display:block;font-size:12px;color:#075f2f}.local-ai-home small{display:block;font-size:10px;color:#5d6d63;margin-top:3px;line-height:1.35}.local-ai-home button{flex:0 0 auto;border:0;border-radius:11px;padding:10px 12px;background:#00843d;color:#fff;font:inherit;font-size:11px;font-weight:850}.local-ai-home button:disabled{opacity:.55}`;
     document.head.appendChild(style);
 
     document.getElementById('localAiToggle').addEventListener('click', async () => {
+      if (!supportsWebGPU()) {
+        if (typeof toast === 'function') toast('WebGPU není na tomto zařízení dostupné.');
+        return;
+      }
+      ai.enabled = true;
+      localStorage.setItem(ENABLE_KEY, '1');
+      updateSupportUI();
+      try {
+        await ensureEngine();
+        if (typeof toast === 'function') toast('Lokální AI je připravena.');
+      } catch (err) {
+        console.error(err);
+        ai.lastError = String(err?.message || err);
+        updateSupportUI();
+        if (typeof toast === 'function') toast('Model se nepodařilo načíst. Použiji lokální fallback.');
+      }
+    });
+
+    const homeBtn = document.getElementById('localAiHomeBtn');
+    homeBtn?.addEventListener('click', async () => {
       if (!supportsWebGPU()) {
         if (typeof toast === 'function') toast('WebGPU není na tomto zařízení dostupné.');
         return;
@@ -85,6 +105,8 @@
     const support = document.getElementById('localAiSupport');
     const badge = document.getElementById('localAiBadge');
     const button = document.getElementById('localAiToggle');
+    const homeBtn = document.getElementById('localAiHomeBtn');
+    const homeStatus = document.getElementById('localAiHomeStatus');
     if (!support || !badge || !button) return;
 
     if (!supportsWebGPU()) {
@@ -93,6 +115,8 @@
       badge.textContent = 'fallback';
       button.disabled = true;
       button.textContent = 'WebGPU není dostupné';
+      if (homeStatus) homeStatus.textContent = 'WebGPU není dostupné – použije se náhradní shrnutí.';
+      if (homeBtn) { homeBtn.disabled = true; homeBtn.textContent = 'Nedostupné'; }
       setHomeStatus('✓ Lokální zpracování', 'amber');
       return;
     }
@@ -102,21 +126,29 @@
       support.textContent = 'Lokální generativní AI je načtená a připravená pro meetingy.';
       badge.textContent = 'AI ready';
       button.textContent = 'Lokální AI je připravena';
+      if (homeStatus) homeStatus.textContent = 'Model je načtený. Meetingy se budou shrnovat generativní AI.';
+      if (homeBtn) { homeBtn.disabled = true; homeBtn.textContent = 'AI připravena'; }
       setHomeStatus('✦ Lokální AI připravena');
     } else if (ai.loading) {
       support.textContent = 'Model se právě načítá do telefonu.';
       badge.textContent = 'načítám';
       button.textContent = 'Načítám model…';
+      if (homeStatus) homeStatus.textContent = 'Stahuji a připravuji model v telefonu…';
+      if (homeBtn) { homeBtn.disabled = true; homeBtn.textContent = 'Načítám…'; }
       setHomeStatus('✦ Načítám lokální AI', 'amber');
     } else if (ai.enabled) {
       support.textContent = 'AI je zapnutá. Model se načte při prvním zpracování nebo tlačítkem níže.';
       badge.textContent = 'zapnuto';
       button.textContent = 'Načíst lokální AI';
+      if (homeStatus) homeStatus.textContent = 'AI je zapnutá; model se načte při prvním použití.';
+      if (homeBtn) { homeBtn.disabled = false; homeBtn.textContent = 'Načíst AI'; }
       setHomeStatus('✦ Lokální AI zapnuta');
     } else {
       support.textContent = 'WebGPU je dostupné. Můžeš aktivovat generativní AI přímo v telefonu.';
       badge.textContent = 'vypnuto';
       button.textContent = 'Aktivovat lokální AI';
+      if (homeStatus) homeStatus.textContent = 'Jednorázově aktivuj lokální model pro skutečné AI shrnutí.';
+      if (homeBtn) { homeBtn.disabled = false; homeBtn.textContent = 'Aktivovat AI'; }
       setHomeStatus('✓ Lokální zpracování');
     }
   }
