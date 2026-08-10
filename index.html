@@ -28,7 +28,11 @@
         <p>Nahraj schůzku, pojmenuj účastníky a dostaneš stručný meeting brief místo stenozáznamu.</p>
         <label class="field"><span>Zákazník / název meetingu</span><input id="meetingName" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA"></label>
         <label class="field"><span>E-mail pro follow-up</span><input id="emailTo" type="email" placeholder="zakaznik@firma.cz"></label>
-        <div class="privacy-note">🔒 Audio a přepis zůstávají v zařízení. Nic se samo neodesílá.</div>
+        <div class="privacy-note">🔒 Nahrávku ani AI shrnutí neposíláme na vlastní server. Generativní model běží přímo v telefonu; kontrolní přepis závisí na možnostech Safari.</div>
+        <div class="local-ai-home">
+          <div><strong>✦ AI shrnutí přímo v iPhonu</strong><small id="localAiHomeStatus">Jednorázově aktivuj lokální model pro skutečné AI shrnutí.</small></div>
+          <button id="localAiHomeBtn" type="button">Aktivovat AI</button>
+        </div>
         <button id="startBtn" class="primary big">● Spustit nahrávání</button>
         <button id="demoBtn" class="secondary">Vyzkoušet demo MINIT</button>
       </div>
@@ -41,7 +45,7 @@
         <div id="timer" class="record-time">00:00</div>
         <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <strong>Nahrávání probíhá…</strong>
-        <p>Mluvte přirozeně. Aplikace průběžně vytváří lokální kontrolní přepis.</p>
+        <p>Mluvte přirozeně. Aplikace průběžně vytváří kontrolní přepis pro následné AI shrnutí.</p>
         <button id="stopBtn" class="stop-round">■</button>
         <span class="stop-label">Ukončit nahrávání</span>
         <details class="transcript-details"><summary>Kontrolní přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
@@ -57,7 +61,7 @@
           <div class="done">✓ <span>Rozdělení řečových bloků</span></div>
           <div id="processSummaryStep">◌ <span>Analýza a shrnutí</span></div>
         </div>
-        <div class="info-box">Lokálně obvykle hotovo během několika sekund. Při prvním použití generativní AI může být potřeba stáhnout model.</div>
+        <div class="info-box">Při prvním použití generativní AI se model jednorázově stáhne do prohlížeče. Další zpracování pak probíhá přímo v zařízení.</div>
       </div>
     </section>
 
@@ -103,9 +107,9 @@
 
     <section id="settingsView" class="view">
       <div class="page-head"><div><div class="eyebrow">NASTAVENÍ</div><h2>Lokální režim</h2></div><span class="badge green">bez API</span></div>
-      <div class="settings-card"><h3>🔒 Soukromí</h3><p>Nahrávka se v této verzi nikam automaticky neodesílá. Historie meetingů se ukládá pouze do lokálního úložiště prohlížeče.</p></div>
-      <div class="settings-card"><h3>🎙 Přepis</h3><p>Pokud prohlížeč podporuje Web Speech, používá se lokální/průběžný přepis. Na iPhonu může přesnost záviset na Safari a systémovém nastavení.</p></div>
-      <div class="settings-card"><h3>👥 Řečníci</h3><p>Bez samostatného hlasového modelu se identity hlasů neurčují spolehlivě. Proto aplikace nechává pojmenování účastníků na tobě.</p></div>
+      <div class="settings-card"><h3>🔒 Soukromí</h3><p>Nahrávku ani AI shrnutí aplikace neposílá na vlastní backend. Lokální generativní model se při prvním použití stáhne z internetu a potom běží v prohlížeči.</p></div>
+      <div class="settings-card"><h3>🎙 Přepis</h3><p>Kontrolní převod řeči na text využívá schopnosti konkrétního prohlížeče. Na iPhonu se dostupnost a způsob zpracování může lišit podle Safari a systémového nastavení.</p></div>
+      <div class="settings-card"><h3>👥 Řečníci</h3><p>Bez samostatného diarizačního modelu se identity hlasů neurčují spolehlivě. Proto aplikace nechává pojmenování účastníků na tobě.</p></div>
       <button id="clearHistoryBtn" class="danger-line">Smazat historii meetingů</button>
     </section>
 
