@@ -1,28 +1,44 @@
 # HOPI Meeting Assistant
 
-Web/PWA prototype for iPhone and desktop.
+Web/PWA aplikace pro iPhone a desktop: meeting → rozpoznání řečníků → pojmenování → stručný KAM brief → follow-up e-mail.
 
-## Flow
+## Co umí frontend
 
-1. Start the meeting and record audio.
-2. A diarization-ready backend can return `Speaker 1`, `Speaker 2`, etc.
-3. The user renames speakers after the meeting.
-4. The app shows only a concise management brief instead of a word-for-word transcript.
-5. Output includes decisions, tasks/owner/deadline, customer requests, HOPI position, risks, key numbers, follow-up and an internal AI recommendation.
-6. A customer-safe follow-up email can be opened from the summary.
+1. Nahraje audio z meetingu.
+2. V demo/lokálním režimu umí kontrolní živý přepis.
+3. Po AI zpracování zobrazí Řečník 1, 2, 3… a umožní doplnit jména.
+4. Místo stenozáznamu ukáže pouze: hlavní závěr, rozhodnutí, úkoly/owner/deadline, požadavky zákazníka, pozici HOPI, rizika, důležitá čísla, follow-up a interní AI doporučení.
+5. Připraví zákaznicky bezpečný follow-up e-mail bez interní AI poznámky.
+6. Lze přidat na plochu iPhonu jako PWA.
 
 ## Demo
 
-Use **Vyzkoušet demo MINIT** on the first screen. It demonstrates the intended three-speaker workflow without requiring a backend.
+GitHub Pages slouží jako okamžitě použitelný demo/lokální režim. Na první obrazovce použij **Vyzkoušet demo MINIT**. Bez AI backendu není skutečné rozlišení více řečníků aktivní.
 
-## AI backend
+## Produkční AI režim
 
-`config.js` intentionally contains no API key. GitHub Pages is a static frontend and must never expose a private AI key. Set `window.HOPI_CONFIG.apiUrl` only after deploying a secure backend that accepts an audio file on `POST /process-meeting` and returns speaker segments plus a structured summary.
+Repozitář obsahuje `render.yaml`, který nasadí frontend i backend jako jednu Render web service.
 
-Without a configured backend the application still records audio and can use the browser's local speech recognition as a fallback, but it cannot genuinely distinguish multiple speakers.
+Při vytvoření Render Blueprintu stačí zadat jediný tajný údaj:
 
-## PWA
+- `OPENAI_API_KEY`
 
-The project contains a web app manifest and service worker, so after publishing over HTTPS it can be added to the iPhone Home Screen from Safari.
+Klíč se nikdy neukládá do GitHubu ani do frontendu.
 
-> Before recording, inform meeting participants and follow company policy and applicable rules.
+Po nasazení Render verze frontend automaticky používá AI API na stejné doméně. Není potřeba ručně nastavovat URL backendu.
+
+### AI pipeline
+
+- audio: `gpt-4o-transcribe-diarize`
+- response: `diarized_json` s časovými segmenty a speaker labels
+- delší audio: `chunking_strategy: auto`
+- shrnutí: `gpt-5-mini`
+- server vrací speaker segments + strukturovaný JSON meeting brief
+
+Backend má health endpoint `/health`, omezení velikosti uploadu a základní hodinový rate limit.
+
+## Bezpečnost
+
+`.env` a lokální závislosti jsou ignorované přes `.gitignore`. API klíč patří pouze do bezpečné serverové environment variable.
+
+> Před nahráváním informuj účastníky a postupuj podle firemních pravidel a platných předpisů.
