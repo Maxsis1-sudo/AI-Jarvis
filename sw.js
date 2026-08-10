@@ -1,4 +1,4 @@
-const CACHE='hopi-meeting-local-v8';
+const CACHE='hopi-meeting-local-v9';
 const ASSETS=[
   './','./index.html','./styles.css','./app.js','./local-ai.js',
   './local-ai-v2.js','./local-ai-worker.js','./speaker-diarization.js',
