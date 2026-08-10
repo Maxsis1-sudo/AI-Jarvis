@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#00843d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HOPI Meeting" />
+  <meta name="description" content="HOPI Meeting Listener – záznam, přepis, zápis a e-mail z jednání." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>HOPI Meeting Listener</title>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="hopi-logo" href="#" aria-label="HOPI">
+        <span>HOPI</span><sup>®</sup>
+      </a>
+      <div class="topbar-copy">
+        <strong>Meeting Listener</strong>
+        <span>záznam → přepis → zápis → e-mail</span>
+      </div>
+      <span id="onlinePill" class="pill">online</span>
+    </header>
+
+    <section id="setupCard" class="card setup-card">
+      <div class="eyebrow">NOVÝ MEETING</div>
+      <h1>Stačí položit telefon na stůl.</h1>
+      <p class="lead">Aplikace zachytí průběh jednání, vytvoří přepis a po ukončení připraví strukturovaný zápis.</p>
+
+      <div class="form-grid">
+        <label>
+          <span>Zákazník / název meetingu</span>
+          <input id="meetingName" autocomplete="organization" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA" />
+        </label>
+        <label>
+          <span>E-mail pro zápis</span>
+          <input id="emailTo" type="email" autocomplete="email" placeholder="např. roman@hopi.cz" />
+        </label>
+      </div>
+
+      <div class="consent-note">
+        <span class="info-icon">i</span>
+        <span>Před spuštěním informuj účastníky, že je schůzka zaznamenávána, a postupuj podle firemních pravidel.</span>
+      </div>
+
+      <button id="startBtn" class="primary-btn hero-btn">
+        <span class="mic-icon">●</span>
+        SPUSTIT MEETING
+      </button>
+
+      <div id="installHint" class="install-hint">
+        <strong>iPhone:</strong> v Safari zvol <b>Sdílet → Přidat na plochu</b>. Pak se aplikace otevře jako samostatná appka.
+      </div>
+    </section>
+
+    <section id="recordingCard" class="card recording-card hidden" aria-live="polite">
+      <div class="recording-head">
+        <div>
+          <div class="eyebrow live-label"><span class="live-dot"></span> PROBÍHÁ MEETING</div>
+          <h2 id="activeMeetingName">MINIT BOHEMIA</h2>
+        </div>
+        <button id="wakeBtn" class="ghost-btn small-btn" type="button">Displej zapnutý</button>
+      </div>
+
+      <div class="recorder-center">
+        <div class="pulse-wrap">
+          <div class="pulse-ring ring-1"></div>
+          <div class="pulse-ring ring-2"></div>
+          <div class="record-core">🎙️</div>
+        </div>
+        <div id="timer" class="timer">00:00:00</div>
+        <div id="recStatus" class="rec-status">Poslouchám…</div>
+      </div>
+
+      <div class="signal" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <details class="transcript-drawer">
+        <summary>Živý přepis <span id="wordCount">0 slov</span></summary>
+        <div id="liveTranscript" class="transcript-box">Čekám na první slova…</div>
+      </details>
+
+      <button id="stopBtn" class="danger-btn">■ UKONČIT A VYTVOŘIT ZÁPIS</button>
+    </section>
+
+    <section id="processingCard" class="card processing-card hidden">
+      <div class="spinner"></div>
+      <h2>Připravuji zápis…</h2>
+      <p>Rozděluji přepis na hlavní body, rozhodnutí, úkoly a otevřená témata.</p>
+    </section>
+
+    <section id="resultCard" class="card result-card hidden">
+      <div class="result-head">
+        <div>
+          <div class="eyebrow">ZÁPIS JE PŘIPRAVEN</div>
+          <h2 id="resultTitle">MINIT BOHEMIA</h2>
+          <p id="resultMeta" class="muted"></p>
+        </div>
+        <span class="success-badge">✓ hotovo</span>
+      </div>
+
+      <div id="summary" class="summary"></div>
+
+      <details class="transcript-drawer transcript-result">
+        <summary>Celý přepis <span id="resultWordCount"></span></summary>
+        <div id="fullTranscript" class="transcript-box"></div>
+      </details>
+
+      <div id="audioBox" class="audio-box hidden">
+        <span>Audio záznam</span>
+        <audio id="audioPlayback" controls></audio>
+      </div>
+
+      <div class="result-actions">
+        <button id="emailBtn" class="primary-btn">✉ ODESLAT E-MAILEM</button>
+        <button id="shareBtn" class="secondary-btn">↗ Sdílet</button>
+        <button id="copyBtn" class="secondary-btn">Kopírovat</button>
+      </div>
+      <button id="newBtn" class="text-btn">+ Nový meeting</button>
+    </section>
+
+    <section id="supportCard" class="support-card hidden">
+      <strong>Prohlížeč neumí živý převod řeči na text.</strong>
+      <span>Audio se může stále nahrát, ale automatický zápis z něj ve statické verzi bez serveru nevytvoříme. Pro plnou podporu by se doplnil zabezpečený transkripční backend.</span>
+    </section>
+
+    <footer>
+      HOPI Meeting Listener · data a přepis se v této verzi zpracovávají v prohlížeči
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
