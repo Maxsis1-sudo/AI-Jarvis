@@ -1,10 +1,14 @@
 (() => {
   const CDN_URL = 'https://esm.run/@mlc-ai/web-llm';
   const ENABLE_KEY = 'hopi-local-ai-enabled-v2';
-  const PRIMARY_MODEL = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
-  const LIGHT_MODEL = 'SmolLM2-360M-Instruct-q4f32_1-MLC';
-  const LOAD_TIMEOUT_MS = 90000;
-  const GENERATE_TIMEOUT_MS = 60000;
+
+  // Mobile-first: do not try Llama 1B on iPhone first.
+  // SmolLM2 360M needs substantially less GPU memory and is used only to
+  // turn already extracted facts into a concise management brief.
+  const PRIMARY_MODEL = 'SmolLM2-360M-Instruct-q4f16_1-MLC';
+  const FALLBACK_MODEL = 'SmolLM2-360M-Instruct-q4f32_1-MLC';
+  const LOAD_TIMEOUT_MS = 60000;
+  const GENERATE_TIMEOUT_MS = 30000;
 
   const ai = {
     enabled: localStorage.getItem(ENABLE_KEY) === '1',
@@ -25,7 +29,7 @@
     const mode = document.getElementById('modeLabel');
     const homeStatus = document.getElementById('localAiHomeStatus');
     if (chip) { chip.textContent = text; chip.dataset.tone = tone; }
-    if (mode) mode.textContent = ai.enabled ? 'Lokální AI · bez externího API' : 'Lokální režim · bez externího API';
+    if (mode) mode.textContent = ai.enabled ? 'Rychlá lokální AI · bez API' : 'Lokální režim · bez externího API';
     if (homeStatus && text) homeStatus.textContent = text.replace(/^✦\s*/, '');
   }
 
@@ -64,7 +68,7 @@
   async function createEngine(model) {
     ai.module ||= await import(CDN_URL);
     ai.worker = new Worker('./local-ai-worker.js', { type: 'module' });
-    processMessage(`Načítám lokální AI (${model === PRIMARY_MODEL ? 'standard' : 'lehký model'})…`);
+    processMessage(`Načítám rychlou lokální AI…`);
     const engine = await ai.module.CreateWebWorkerMLCEngine(
       ai.worker,
       model,
@@ -87,12 +91,12 @@
 
     ai.loading = (async () => {
       try {
-        return await timeout(createEngine(PRIMARY_MODEL), LOAD_TIMEOUT_MS, 'Načtení AI');
+        return await timeout(createEngine(PRIMARY_MODEL), LOAD_TIMEOUT_MS, 'Načtení rychlé AI');
       } catch (firstErr) {
-        console.warn('Primary local AI failed, trying light model:', firstErr);
+        console.warn('SmolLM2 q4f16 failed, trying q4f32:', firstErr);
         resetEngine();
-        processMessage('Standardní model byl pro telefon příliš náročný. Zkouším lehčí model…');
-        return await timeout(createEngine(LIGHT_MODEL), LOAD_TIMEOUT_MS, 'Načtení lehké AI');
+        processMessage('První varianta modelu není podporovaná. Zkouším kompatibilní variantu…');
+        return await timeout(createEngine(FALLBACK_MODEL), LOAD_TIMEOUT_MS, 'Načtení kompatibilní AI');
       }
     })();
 
@@ -108,7 +112,7 @@
     throw new Error('AI nevrátila validní JSON.');
   }
 
-  async function streamJSON(system, user, maxTokens = 420) {
+  async function streamJSON(system, user, maxTokens = 320) {
     const engine = await ensureEngine();
     const job = (async () => {
       const chunks = await engine.chat.completions.create({
@@ -116,8 +120,8 @@
           { role: 'system', content: system },
           { role: 'user', content: user }
         ],
-        temperature: 0.1,
-        top_p: 0.9,
+        temperature: 0.05,
+        top_p: 0.85,
         max_tokens: maxTokens,
         response_format: { type: 'json_object' },
         stream: true
@@ -126,9 +130,9 @@
       let last = 0;
       for await (const chunk of chunks) {
         out += chunk.choices?.[0]?.delta?.content || '';
-        if (out.length - last > 80) {
+        if (out.length - last > 70) {
           last = out.length;
-          processMessage(`Lokální AI tvoří Meeting Brief… ${Math.min(95, Math.round(out.length / 8))} %`);
+          processMessage('Rychlá AI skládá Meeting Brief…');
           await sleep(0);
         }
       }
@@ -143,64 +147,69 @@
     }
   }
 
-  function chunksFor(text, maxChars = 4200) {
-    const sentences = String(text || '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/).filter(Boolean);
-    const chunks = [];
-    let current = '';
-    for (const sentence of sentences) {
-      if (current && current.length + sentence.length + 1 > maxChars) {
-        chunks.push(current);
-        current = sentence;
-      } else current += (current ? ' ' : '') + sentence;
-    }
-    if (current) chunks.push(current);
-    return chunks;
-  }
+  const FINAL_SYSTEM = `Jsi seniorní KAM meeting assistant pro logistickou společnost. Odpovídej česky. Z předzpracovaných faktů vytvoř stručný manažerský Meeting Brief. Neopisuj meeting slovo od slova a nic nevymýšlej. Vrať pouze validní JSON: {"executive":"max 3 krátké věty","decisions":[],"tasks":[{"task":"","owner":"","deadline":""}],"requests":[],"hopi":[],"risks":[],"followup":[],"recommendation":""}. Každé pole maximálně 5 položek. recommendation je pouze interní doporučení pro KAM.`;
 
-  const FINAL_SYSTEM = `Jsi seniorní KAM meeting assistant pro logistickou společnost. V češtině vytvoř pouze stručný manažerský Meeting Brief. Neopisuj meeting slovo od slova. Nic nevymýšlej. Vrať pouze validní JSON: {"executive":"2-4 věty","decisions":[],"tasks":[{"task":"","owner":"","deadline":""}],"requests":[],"hopi":[],"risks":[],"followup":[],"recommendation":""}. executive vysvětluje, o čem meeting byl a kam se posunul. recommendation je pouze interní doporučení pro KAM.`;
-  const PART_SYSTEM = `Z tohoto úseku obchodního/logistického meetingu vytáhni jen fakta důležitá pro další práci. Nic nevymýšlej. Vrať pouze JSON: {"summary":"","decisions":[],"tasks":[{"task":"","owner":"","deadline":""}],"requests":[],"hopi":[],"risks":[],"followup":[]}.`;
+  function normalize(final, source, fallback) {
+    const list = (value, backup=[]) => Array.isArray(value) && value.length ? value.filter(Boolean).slice(0,5) : (backup || []).slice(0,5);
+    const tasks = Array.isArray(final.tasks) && final.tasks.length
+      ? final.tasks.slice(0,6).map(t => ({
+          task: String(t?.task || '').trim(),
+          owner: String(t?.owner || '').trim(),
+          deadline: String(t?.deadline || '').trim()
+        })).filter(t => t.task)
+      : (fallback?.tasks || []).slice(0,6);
 
-  function normalize(final, source) {
     return {
-      executive: String(final.executive || '').trim() || 'Meeting byl zpracován lokální AI.',
-      decisions: Array.isArray(final.decisions) ? final.decisions.filter(Boolean).slice(0, 6) : [],
-      tasks: Array.isArray(final.tasks) ? final.tasks.slice(0, 7).map(t => ({
-        task: String(t?.task || '').trim(),
-        owner: String(t?.owner || '').trim(),
-        deadline: String(t?.deadline || '').trim()
-      })).filter(t => t.task) : [],
-      requests: Array.isArray(final.requests) ? final.requests.filter(Boolean).slice(0, 6) : [],
-      hopi: Array.isArray(final.hopi) ? final.hopi.filter(Boolean).slice(0, 6) : [],
-      risks: Array.isArray(final.risks) ? final.risks.filter(Boolean).slice(0, 6) : [],
-      followup: Array.isArray(final.followup) ? final.followup.filter(Boolean).slice(0, 6) : [],
-      recommendation: String(final.recommendation || '').trim() || 'Potvrdit vlastníky úkolů a termíny před odesláním follow-upu.',
+      executive: String(final.executive || '').trim() || fallback?.executive || 'Meeting byl zpracován.',
+      decisions: list(final.decisions, fallback?.decisions),
+      tasks,
+      requests: list(final.requests, fallback?.requests),
+      hopi: list(final.hopi, fallback?.hopi),
+      risks: list(final.risks, fallback?.risks),
+      followup: list(final.followup, fallback?.followup),
+      recommendation: String(final.recommendation || '').trim() || fallback?.recommendation || 'Potvrdit vlastníky úkolů a termíny před odesláním follow-upu.',
       source: typeof splitSentences === 'function' ? splitSentences(source) : [source],
       aiGenerated: true,
       aiModel: ai.model
     };
   }
 
+  function compactEvidence(clean) {
+    // First do the cheap deterministic extraction already present in app.js.
+    // The LLM only rewrites these facts. This dramatically reduces prompt size
+    // and avoids multi-pass generation on the phone.
+    const fallback = typeof buildLocalAnalysis === 'function' ? buildLocalAnalysis(clean) : null;
+    if (!fallback) {
+      return { fallback: null, evidence: clean.slice(0, 5500) };
+    }
+    const evidence = {
+      preliminaryConclusion: fallback.executive,
+      decisions: (fallback.decisions || []).slice(0,6),
+      tasks: (fallback.tasks || []).slice(0,7),
+      customerRequests: (fallback.requests || []).slice(0,6),
+      hopiPosition: (fallback.hopi || []).slice(0,6),
+      risks: (fallback.risks || []).slice(0,6),
+      followup: (fallback.followup || []).slice(0,6),
+      selectedQuotes: (fallback.source || []).filter(x => String(x).length > 25).slice(0,10)
+    };
+    return { fallback, evidence: JSON.stringify(evidence) };
+  }
+
   async function summarize(transcript) {
     const clean = String(transcript || '').trim();
     if (clean.length < 30) throw new Error('Přepis je příliš krátký pro AI shrnutí.');
-    processMessage('Lokální AI analyzuje meeting…');
-    const parts = chunksFor(clean);
 
-    // Běžný mobilní meeting: jeden průchod = výrazně menší riziko zaseknutí.
-    if (parts.length <= 1) {
-      const final = await streamJSON(FINAL_SYSTEM, `NÁZEV: ${document.getElementById('meetingName')?.value || 'Meeting'}\n\nPŘEPIS:\n${clean}`, 420);
-      return normalize(final, clean);
-    }
+    processMessage('Připravuji důležité body…');
+    const { fallback, evidence } = compactEvidence(clean);
+    processMessage('Rychlá lokální AI tvoří Meeting Brief…');
 
-    // Delší meeting: stručné mezivýstupy, pak finální konsolidace.
-    const extracted = [];
-    for (let i = 0; i < parts.length; i++) {
-      processMessage(`Lokální AI analyzuje část ${i + 1} z ${parts.length}…`);
-      extracted.push(await streamJSON(PART_SYSTEM, parts[i], 260));
-    }
-    processMessage('Lokální AI skládá finální Meeting Brief…');
-    const final = await streamJSON(FINAL_SYSTEM, `NÁZEV: ${document.getElementById('meetingName')?.value || 'Meeting'}\n\nPODKLADY:\n${JSON.stringify(extracted)}`, 420);
-    return normalize(final, clean);
+    // Always one generation only on mobile.
+    const final = await streamJSON(
+      FINAL_SYSTEM,
+      `NÁZEV MEETINGU: ${document.getElementById('meetingName')?.value || 'Meeting'}\n\nPŘEDZPRACOVANÉ FAKTY:\n${evidence}`,
+      320
+    );
+    return normalize(final, clean, fallback);
   }
 
   async function prepare() {
@@ -215,9 +224,9 @@
         setStatus('✦ AI shrnutí hotovo');
         return result;
       } catch (err) {
-        console.error('Local AI v2 failed:', err);
+        console.error('Fast local AI failed:', err);
         ai.lastError = String(err?.message || err);
-        processMessage('Lokální AI byla příliš pomalá nebo nedostupná. Pokračuji rychlým lokálním shrnutím.');
+        processMessage('AI na tomto telefonu nestihla limit. Pokračuji okamžitě rychlým lokálním shrnutím.');
         setStatus('✓ Rychlé lokální shrnutí', 'amber');
         return null;
       } finally {
@@ -234,19 +243,19 @@
     card.id = 'localAiV2Card';
     card.className = 'settings-card';
     card.innerHTML = `
-      <h3>✦ Lokální AI shrnutí</h3>
-      <p>Generativní model běží v samostatném vlákně, aby nezamrzlo rozhraní. Pokud je standardní model pro iPhone příliš náročný, aplikace automaticky zkusí lehčí variantu a při dlouhém čekání přejde na rychlý fallback.</p>
-      <button id="localAiV2Toggle" class="primary">${ai.enabled ? 'Načíst AI' : 'Aktivovat AI'}</button>`;
+      <h3>✦ Rychlá lokální AI</h3>
+      <p>Mobilní režim používá malý SmolLM2 360M model a pouze jeden AI průchod. Nejprve aplikace lokálně vytáhne fakta a AI je pak jen převede do stručného Meeting Briefu. Pokud telefon AI nezvládne do 30 sekund, pokračuje bez čekání fallbackem.</p>
+      <button id="localAiV2Toggle" class="primary">${ai.enabled ? 'Načíst rychlou AI' : 'Aktivovat rychlou AI'}</button>`;
     settings.insertBefore(card, document.getElementById('clearHistoryBtn'));
 
     document.getElementById('localAiV2Toggle').onclick = async () => {
       ai.enabled = true;
       localStorage.setItem(ENABLE_KEY, '1');
-      setStatus('✦ Načítám lokální AI', 'amber');
+      setStatus('✦ Načítám rychlou AI', 'amber');
       try {
         await ensureEngine();
-        setStatus(`✦ AI připravena (${ai.model === PRIMARY_MODEL ? 'standard' : 'lehká'})`);
-        if (typeof toast === 'function') toast('Lokální AI je připravena.');
+        setStatus('✦ Rychlá AI připravena');
+        if (typeof toast === 'function') toast('Rychlá lokální AI je připravena.');
       } catch (err) {
         ai.lastError = String(err?.message || err);
         setStatus('✓ Rychlé lokální shrnutí', 'amber');
@@ -267,7 +276,7 @@
     showBriefBtn.onclick = async event => {
       if (ai.enabled && supportsWebGPU() && !state?.demo) {
         showView('processView');
-        document.getElementById('processSummaryStep').innerHTML = '◌ <span>Lokální AI tvoří Meeting Brief</span>';
+        document.getElementById('processSummaryStep').innerHTML = '◌ <span>Rychlá AI tvoří Meeting Brief</span>';
         await prepare();
         document.getElementById('processSummaryStep').innerHTML = '✓ <span>Meeting Brief připraven</span>';
       }
@@ -293,7 +302,7 @@
     div.className = 'info-box';
     div.style.marginBottom = '10px';
     div.textContent = state?.analysis?.aiGenerated
-      ? `✦ Shrnutí vytvořila lokální AI (${state.analysis.aiModel === PRIMARY_MODEL ? 'Llama 1B' : 'lehký model'}).`
+      ? '✦ Shrnutí vytvořila rychlá lokální AI (SmolLM2 360M).'
       : '✓ Použit rychlý lokální fallback.';
     tab.prepend(div);
   }
@@ -311,5 +320,5 @@
 
   injectSettings();
   patchFlow();
-  if (ai.enabled) setStatus('✦ Lokální AI zapnuta');
+  if (ai.enabled) setStatus('✦ Rychlá lokální AI zapnuta');
 })();
