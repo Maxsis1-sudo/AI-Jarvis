@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="HOPI Meeting" />
-  <meta name="description" content="HOPI Meeting Listener – záznam, přepis, zápis a e-mail z jednání." />
+  <meta name="description" content="HOPI Meeting Listener – meeting, řečníci, shrnutí, úkoly a follow-up." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -17,108 +17,93 @@
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <a class="hopi-logo" href="#" aria-label="HOPI">
-        <span>HOPI</span><sup>®</sup>
-      </a>
-      <div class="topbar-copy">
-        <strong>Meeting Listener</strong>
-        <span>záznam → přepis → zápis → e-mail</span>
-      </div>
+      <a class="hopi-logo" href="#" aria-label="HOPI"><span>HOPI</span><sup>®</sup></a>
+      <div class="topbar-copy"><strong>Meeting Assistant</strong><span>poslech → řečníci → shrnutí → follow-up</span></div>
       <span id="onlinePill" class="pill">online</span>
     </header>
 
     <section id="setupCard" class="card setup-card">
       <div class="eyebrow">NOVÝ MEETING</div>
-      <h1>Stačí položit telefon na stůl.</h1>
-      <p class="lead">Aplikace zachytí průběh jednání, vytvoří přepis a po ukončení připraví strukturovaný zápis.</p>
+      <h1>Ty mluv. Asistent si vezme zbytek.</h1>
+      <p class="lead">Nejde o stenozáznam. Cílem je zachytit, <b>kdo co řekl</b>, a po meetingu vytáhnout jen to, co je důležité pro další práci.</p>
 
       <div class="form-grid">
-        <label>
-          <span>Zákazník / název meetingu</span>
-          <input id="meetingName" autocomplete="organization" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA" />
-        </label>
-        <label>
-          <span>E-mail pro zápis</span>
-          <input id="emailTo" type="email" autocomplete="email" placeholder="např. roman@hopi.cz" />
-        </label>
+        <label><span>Zákazník / název meetingu</span><input id="meetingName" autocomplete="organization" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA" /></label>
+        <label><span>E-mail pro zápis</span><input id="emailTo" type="email" autocomplete="email" placeholder="např. roman@hopi.cz" /></label>
       </div>
 
-      <div class="consent-note">
-        <span class="info-icon">i</span>
-        <span>Před spuštěním informuj účastníky, že je schůzka zaznamenávána, a postupuj podle firemních pravidel.</span>
+      <div class="feature-strip">
+        <div><b>01</b><span>Rozliší řečníky</span></div>
+        <div><b>02</b><span>Ty je pojmenuješ</span></div>
+        <div><b>03</b><span>AI udělá shrnutí</span></div>
       </div>
 
-      <button id="startBtn" class="primary-btn hero-btn">
-        <span class="mic-icon">●</span>
-        SPUSTIT MEETING
-      </button>
+      <div class="consent-note"><span class="info-icon">i</span><span>Před spuštěním informuj účastníky, že je schůzka zaznamenávána, a postupuj podle firemních pravidel.</span></div>
 
-      <div id="installHint" class="install-hint">
-        <strong>iPhone:</strong> v Safari zvol <b>Sdílet → Přidat na plochu</b>. Pak se aplikace otevře jako samostatná appka.
-      </div>
+      <button id="startBtn" class="primary-btn hero-btn"><span class="mic-icon">●</span> SPUSTIT MEETING</button>
+      <button id="demoBtn" class="secondary-btn demo-btn">▶ VYZKOUŠET DEMO MINIT</button>
+
+      <div id="installHint" class="install-hint"><strong>iPhone:</strong> Safari → Sdílet → <b>Přidat na plochu</b>.</div>
     </section>
 
     <section id="recordingCard" class="card recording-card hidden" aria-live="polite">
       <div class="recording-head">
-        <div>
-          <div class="eyebrow live-label"><span class="live-dot"></span> PROBÍHÁ MEETING</div>
-          <h2 id="activeMeetingName">MINIT BOHEMIA</h2>
-        </div>
+        <div><div class="eyebrow live-label"><span class="live-dot"></span> PROBÍHÁ MEETING</div><h2 id="activeMeetingName">MINIT BOHEMIA</h2></div>
         <button id="wakeBtn" class="ghost-btn small-btn" type="button">Displej zapnutý</button>
       </div>
-
       <div class="recorder-center">
-        <div class="pulse-wrap">
-          <div class="pulse-ring ring-1"></div>
-          <div class="pulse-ring ring-2"></div>
-          <div class="record-core">🎙️</div>
-        </div>
-        <div id="timer" class="timer">00:00:00</div>
-        <div id="recStatus" class="rec-status">Poslouchám…</div>
+        <div class="pulse-wrap"><div class="pulse-ring ring-1"></div><div class="pulse-ring ring-2"></div><div class="record-core">🎙️</div></div>
+        <div id="timer" class="timer">00:00:00</div><div id="recStatus" class="rec-status">Poslouchám…</div>
       </div>
-
-      <div class="signal" aria-hidden="true">
-        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-      </div>
-
-      <details class="transcript-drawer">
-        <summary>Živý přepis <span id="wordCount">0 slov</span></summary>
-        <div id="liveTranscript" class="transcript-box">Čekám na první slova…</div>
-      </details>
-
-      <button id="stopBtn" class="danger-btn">■ UKONČIT A VYTVOŘIT ZÁPIS</button>
+      <div class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <details class="transcript-drawer"><summary>Kontrolní živý přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript-box">Čekám na první slova…</div></details>
+      <button id="stopBtn" class="danger-btn">■ UKONČIT MEETING</button>
     </section>
 
     <section id="processingCard" class="card processing-card hidden">
-      <div class="spinner"></div>
-      <h2>Připravuji zápis…</h2>
-      <p>Rozděluji přepis na hlavní body, rozhodnutí, úkoly a otevřená témata.</p>
+      <div class="spinner"></div><h2>Analyzuji meeting…</h2>
+      <div class="processing-steps"><span class="done">✓ Audio</span><span>→</span><span>Řečníci</span><span>→</span><span>Klíčové body</span></div>
+      <p id="processingText">Hledám změny řečníků a připravuji podklady pro shrnutí.</p>
+    </section>
+
+    <section id="speakersCard" class="card speakers-card hidden">
+      <div class="result-head">
+        <div><div class="eyebrow">ROZPOZNANÍ ŘEČNÍCI</div><h2>Kdo byl kdo?</h2><p class="muted">Stačí je pojmenovat. Jména se okamžitě promítnou do celého shrnutí.</p></div>
+        <span id="speakerCountBadge" class="success-badge">3 hlasy</span>
+      </div>
+      <div id="speakerList" class="speaker-list"></div>
+      <button id="applySpeakersBtn" class="primary-btn">POUŽÍT JMÉNA A ZOBRAZIT SHRNUTÍ →</button>
+      <button id="skipSpeakersBtn" class="text-btn">Ponechat Řečník 1, 2, 3</button>
     </section>
 
     <section id="resultCard" class="card result-card hidden">
       <div class="result-head">
-        <div>
-          <div class="eyebrow">ZÁPIS JE PŘIPRAVEN</div>
-          <h2 id="resultTitle">MINIT BOHEMIA</h2>
-          <p id="resultMeta" class="muted"></p>
-        </div>
+        <div><div class="eyebrow">MEETING BRIEF JE PŘIPRAVEN</div><h2 id="resultTitle">MINIT BOHEMIA</h2><p id="resultMeta" class="muted"></p></div>
         <span class="success-badge">✓ hotovo</span>
       </div>
 
-      <div id="summary" class="summary"></div>
-
-      <details class="transcript-drawer transcript-result">
-        <summary>Celý přepis <span id="resultWordCount"></span></summary>
-        <div id="fullTranscript" class="transcript-box"></div>
-      </details>
-
-      <div id="audioBox" class="audio-box hidden">
-        <span>Audio záznam</span>
-        <audio id="audioPlayback" controls></audio>
+      <div class="executive-card">
+        <span class="executive-label">HLAVNÍ ZÁVĚR</span>
+        <p id="executiveSummary"></p>
       </div>
 
+      <div id="metrics" class="metric-grid"></div>
+      <div id="summary" class="summary"></div>
+
+      <div class="insight-card">
+        <div class="insight-icon">✦</div>
+        <div><span>INTERNÍ AI POHLED</span><p id="aiRecommendation"></p></div>
+      </div>
+
+      <details class="transcript-drawer transcript-result">
+        <summary>Zdroj / přepis podle řečníků <span id="resultWordCount"></span></summary>
+        <div id="speakerTranscript" class="speaker-transcript"></div>
+      </details>
+
+      <div id="audioBox" class="audio-box hidden"><span>Audio záznam</span><audio id="audioPlayback" controls></audio></div>
+
       <div class="result-actions">
-        <button id="emailBtn" class="primary-btn">✉ ODESLAT E-MAILEM</button>
+        <button id="emailBtn" class="primary-btn">✉ PŘIPRAVIT FOLLOW-UP E-MAIL</button>
         <button id="shareBtn" class="secondary-btn">↗ Sdílet</button>
         <button id="copyBtn" class="secondary-btn">Kopírovat</button>
       </div>
@@ -126,16 +111,14 @@
     </section>
 
     <section id="supportCard" class="support-card hidden">
-      <strong>Prohlížeč neumí živý převod řeči na text.</strong>
-      <span>Audio se může stále nahrát, ale automatický zápis z něj ve statické verzi bez serveru nevytvoříme. Pro plnou podporu by se doplnil zabezpečený transkripční backend.</span>
+      <strong>Poznámka k AI rozpoznání řečníků</strong>
+      <span>Webové rozhraní je na diarizaci připravené. Skutečné rozlišení více hlasů vyžaduje zabezpečený AI backend; bez něj aplikace používá lokální přepis jako jeden hlas. Tlačítko Demo ukazuje finální zamýšlený tok se třemi řečníky.</span>
     </section>
 
-    <footer>
-      HOPI Meeting Listener · data a přepis se v této verzi zpracovávají v prohlížeči
-    </footer>
+    <footer>HOPI Meeting Assistant · minimalistický KAM meeting workflow</footer>
   </main>
-
   <div id="toast" class="toast" role="status"></div>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
