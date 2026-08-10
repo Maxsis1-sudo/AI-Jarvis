@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="HOPI Meeting" />
-  <meta name="description" content="HOPI Meeting Assistant – lokální meeting brief bez externího API." />
+  <meta name="description" content="HOPI Meeting Assistant – lokální meeting brief a rozdělení hlasů bez externího API." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -25,12 +25,12 @@
       <div class="hero-card">
         <div class="status-chip">✓ Lokální zpracování</div>
         <h1>Nový meeting</h1>
-        <p>Nahraj schůzku, pojmenuj účastníky a dostaneš stručný meeting brief místo stenozáznamu.</p>
+        <p>Nahraj schůzku, nech aplikaci navrhnout hlasové skupiny, pojmenuj účastníky a dostaneš stručný Meeting Brief místo stenozáznamu.</p>
         <label class="field"><span>Zákazník / název meetingu</span><input id="meetingName" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA"></label>
         <label class="field"><span>E-mail pro follow-up</span><input id="emailTo" type="email" placeholder="zakaznik@firma.cz"></label>
-        <div class="privacy-note">🔒 Nahrávku ani AI shrnutí neposíláme na vlastní server. Generativní model běží přímo v telefonu; kontrolní přepis závisí na možnostech Safari.</div>
+        <div class="privacy-note">🔒 Nahrávku ani AI shrnutí neposíláme na vlastní server. AI modely běží v telefonu; při prvním použití se pouze stáhnou jejich soubory.</div>
         <div class="local-ai-home">
-          <div><strong>✦ AI shrnutí přímo v iPhonu</strong><small id="localAiHomeStatus">Jednorázově aktivuj lokální model pro skutečné AI shrnutí.</small></div>
+          <div><strong>✦ AI shrnutí přímo v iPhonu</strong><small id="localAiHomeStatus">Jednorázově aktivuj lokální model pro generativní Meeting Brief.</small></div>
           <button id="localAiHomeBtn" type="button">Aktivovat AI</button>
         </div>
         <button id="startBtn" class="primary big">● Spustit nahrávání</button>
@@ -45,7 +45,7 @@
         <div id="timer" class="record-time">00:00</div>
         <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <strong>Nahrávání probíhá…</strong>
-        <p>Mluvte přirozeně. Aplikace průběžně vytváří kontrolní přepis pro následné AI shrnutí.</p>
+        <p>Mluvte přirozeně. Aplikace průběžně vytváří kontrolní přepis a při zapnutém hlasovém modelu si ukládá krátké lokální vzorky pro rozdělení řečníků.</p>
         <button id="stopBtn" class="stop-round">■</button>
         <span class="stop-label">Ukončit nahrávání</span>
         <details class="transcript-details"><summary>Kontrolní přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
@@ -58,16 +58,16 @@
         <h2>Zpracovávám nahrávku</h2>
         <div class="process-list">
           <div class="done">✓ <span>Přepis řeči</span></div>
-          <div class="done">✓ <span>Rozdělení řečových bloků</span></div>
+          <div class="done">✓ <span>Řečové bloky / hlasové vzorky</span></div>
           <div id="processSummaryStep">◌ <span>Analýza a shrnutí</span></div>
         </div>
-        <div class="info-box">Při prvním použití generativní AI se model jednorázově stáhne do prohlížeče. Další zpracování pak probíhá přímo v zařízení.</div>
+        <div class="info-box">Generativní AI běží v samostatném vlákně. Pokud je telefon příliš pomalý, aplikace po časovém limitu automaticky použije rychlé lokální shrnutí.</div>
       </div>
     </section>
 
     <section id="speakersView" class="view">
-      <div class="page-head"><div><div class="eyebrow">ÚČASTNÍCI</div><h2>Přiřaďte jména k řečníkům</h2></div><span class="badge">bez API</span></div>
-      <p class="helper">V bez‑API režimu aplikace vytváří lokální řečové bloky, ale hlasovou identitu nepotvrzuje. Jména doplníš ty a propíšou se do úkolů i výstupu.</p>
+      <div class="page-head"><div><div class="eyebrow">ÚČASTNÍCI</div><h2>Přiřaďte jména k řečníkům</h2></div><span class="badge">lokálně</span></div>
+      <p class="helper">Pokud je zapnuté lokální rozpoznání hlasů, aplikace navrhne skupiny Řečník 1 / 2 / 3 podle podobnosti hlasu. Ty jen potvrdíš jména. Nejde o biometrické potvrzení identity.</p>
       <div id="speakerList" class="speaker-list"></div>
       <div class="speaker-count-row"><button id="removeSpeakerBtn" class="mini">−</button><span id="speakerCountLabel">3 řečníci</span><button id="addSpeakerBtn" class="mini">+</button></div>
       <button id="applySpeakersBtn" class="primary">Potvrdit a pokračovat</button>
@@ -77,7 +77,7 @@
       <div class="done-screen">
         <div class="check-ring">✓</div>
         <h2>Hotovo!</h2>
-        <p>Váš meeting brief je připraven.</p>
+        <p>Váš Meeting Brief je připraven.</p>
         <button id="showBriefBtn" class="primary">Zobrazit shrnutí</button>
         <button id="quickMailBtn" class="secondary">Otevřít follow-up e-mail</button>
       </div>
@@ -107,9 +107,9 @@
 
     <section id="settingsView" class="view">
       <div class="page-head"><div><div class="eyebrow">NASTAVENÍ</div><h2>Lokální režim</h2></div><span class="badge green">bez API</span></div>
-      <div class="settings-card"><h3>🔒 Soukromí</h3><p>Nahrávku ani AI shrnutí aplikace neposílá na vlastní backend. Lokální generativní model se při prvním použití stáhne z internetu a potom běží v prohlížeči.</p></div>
+      <div class="settings-card"><h3>🔒 Soukromí</h3><p>Nahrávku ani Meeting Brief aplikace neposílá na vlastní backend. Lokální modely se při prvním použití stáhnou z internetu a inference potom probíhá v prohlížeči.</p></div>
       <div class="settings-card"><h3>🎙 Přepis</h3><p>Kontrolní převod řeči na text využívá schopnosti konkrétního prohlížeče. Na iPhonu se dostupnost a způsob zpracování může lišit podle Safari a systémového nastavení.</p></div>
-      <div class="settings-card"><h3>👥 Řečníci</h3><p>Bez samostatného diarizačního modelu se identity hlasů neurčují spolehlivě. Proto aplikace nechává pojmenování účastníků na tobě.</p></div>
+      <div class="settings-card"><h3>👥 Řečníci</h3><p>Volitelný lokální hlasový model seskupuje krátké vzorky podle podobnosti hlasu. Výsledkem je návrh Řečník 1 / 2 / 3; jména vždy potvrzuje uživatel.</p></div>
       <button id="clearHistoryBtn" class="danger-line">Smazat historii meetingů</button>
     </section>
 
