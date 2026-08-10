@@ -1,5 +1,8 @@
 // HOPI Meeting Assistant configuration.
-// GitHub Pages itself must never contain an OpenAI API key.
-// When a secure backend is deployed, set its public endpoint here, e.g.:
-// window.HOPI_CONFIG = { apiUrl: 'https://meeting-api.example.com' };
-window.HOPI_CONFIG = { apiUrl: '' };
+// Never place an OpenAI API key in this file.
+// On Render, frontend and AI API run on the same origin.
+// On GitHub Pages, apiUrl remains empty and the app works in demo/local fallback mode.
+const isRender = window.location.hostname.endsWith('.onrender.com');
+window.HOPI_CONFIG = {
+  apiUrl: isRender ? window.location.origin : ''
+};
