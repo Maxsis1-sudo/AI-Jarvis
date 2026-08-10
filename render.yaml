@@ -1,16 +1,17 @@
 services:
   - type: web
-    name: hopi-meeting-assistant-api
+    name: hopi-meeting-assistant
     runtime: node
-    rootDir: server
-    buildCommand: npm install
-    startCommand: npm start
+    plan: free
+    region: frankfurt
+    buildCommand: cd server && npm install && rm -rf public && mkdir public && cp ../index.html ../styles.css ../app.js ../config.js ../manifest.webmanifest ../icon.svg ../sw.js public/
+    startCommand: cd server && npm start
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
       - key: OPENAI_API_KEY
         sync: false
-      - key: ALLOWED_ORIGIN
-        value: https://maxsis1-sudo.github.io
       - key: SUMMARY_MODEL
         value: gpt-5-mini
+      - key: RATE_LIMIT_PER_HOUR
+        value: "20"
