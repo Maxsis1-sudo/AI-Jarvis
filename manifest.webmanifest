@@ -1,12 +1,12 @@
 {
-  "name": "HOPI Meeting Listener",
+  "name": "HOPI Meeting Assistant",
   "short_name": "HOPI Meeting",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f2f5f2",
   "theme_color": "#00843d",
-  "description": "Záznam meetingu, živý přepis, zápis a e-mail.",
+  "description": "Záznam meetingu, rozlišení řečníků, manažerské shrnutí, úkoly a follow-up e-mail.",
   "icons": [
     {
       "src": "icon.svg",
