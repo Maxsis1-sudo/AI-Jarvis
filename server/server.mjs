@@ -3,11 +3,16 @@ import cors from 'cors';
 import multer from 'multer';
 import OpenAI from 'openai';
 import { File } from 'node:buffer';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const app = express();
 const port = process.env.PORT || 8787;
 const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
 const summaryModel = process.env.SUMMARY_MODEL || 'gpt-5-mini';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const publicDir = path.join(__dirname, 'public');
 
 if (!process.env.OPENAI_API_KEY) {
   console.warn('OPENAI_API_KEY is not set. /process-meeting will fail until it is configured.');
@@ -19,14 +24,37 @@ const upload = multer({
   limits: { fileSize: 150 * 1024 * 1024 }
 });
 
+app.set('trust proxy', 1);
 app.use(cors({ origin: allowedOrigin === '*' ? true : allowedOrigin }));
 app.use(express.json({ limit: '1mb' }));
 
+const rateBuckets = new Map();
+const rateLimitPerHour = Number(process.env.RATE_LIMIT_PER_HOUR || 20);
+function meetingRateLimit(req, res, next) {
+  const key = req.ip || 'unknown';
+  const now = Date.now();
+  const hour = 60 * 60 * 1000;
+  const current = rateBuckets.get(key);
+  if (!current || now - current.startedAt > hour) {
+    rateBuckets.set(key, { startedAt: now, count: 1 });
+    return next();
+  }
+  current.count += 1;
+  if (current.count > rateLimitPerHour) {
+    return res.status(429).json({ error: 'Too many meeting-processing requests. Try again later.' });
+  }
+  next();
+}
+
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'HOPI Meeting Assistant API' });
+  res.json({
+    ok: true,
+    service: 'HOPI Meeting Assistant API',
+    aiConfigured: Boolean(process.env.OPENAI_API_KEY)
+  });
 });
 
-app.post('/process-meeting', upload.single('audio'), async (req, res) => {
+app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Missing audio file.' });
     if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Server is missing OPENAI_API_KEY.' });
@@ -142,6 +170,11 @@ function formatTime(seconds) {
   return `${m}:${s}`;
 }
 
+app.use(express.static(publicDir, {
+  extensions: ['html'],
+  maxAge: '1h'
+}));
+
 app.listen(port, () => {
-  console.log(`HOPI Meeting Assistant API listening on port ${port}`);
+  console.log(`HOPI Meeting Assistant listening on port ${port}`);
 });
