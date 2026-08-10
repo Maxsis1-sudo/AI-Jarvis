@@ -1,0 +1,23 @@
+name: HOPIMeetingListener
+options:
+  bundleIdPrefix: cz.hopi
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: 17.0
+    SWIFT_VERSION: 5.0
+targets:
+  HOPIMeetingListener:
+    type: application
+    platform: iOS
+    sources:
+      - path: .
+        excludes:
+          - README.md
+          - project.yml
+          - .gitignore
+    info:
+      path: Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cz.hopi.meetinglistener
+        TARGETED_DEVICE_FAMILY: 1
