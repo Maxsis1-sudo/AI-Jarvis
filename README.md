@@ -1,29 +1,28 @@
-# HOPI Meeting Listener
+# HOPI Meeting Assistant
 
-Webová/PWA verze meeting asistenta optimalizovaná pro iPhone i desktop.
+Web/PWA prototype for iPhone and desktop.
 
-## Jak funguje
+## Flow
 
-1. Zadej zákazníka / název meetingu a e-mail pro zápis.
-2. Spusť meeting a povol mikrofon.
-3. Aplikace průběžně zachytává audio a – pokud to prohlížeč podporuje – vytváří český živý přepis.
-4. Po ukončení vytvoří strukturovaný zápis: shrnutí, rozhodnutí, úkoly a otevřené body.
-5. Zápis lze poslat přes předvyplněný e-mail, sdílet nebo kopírovat.
+1. Start the meeting and record audio.
+2. A diarization-ready backend can return `Speaker 1`, `Speaker 2`, etc.
+3. The user renames speakers after the meeting.
+4. The app shows only a concise management brief instead of a word-for-word transcript.
+5. Output includes decisions, tasks/owner/deadline, customer requests, HOPI position, risks, key numbers, follow-up and an internal AI recommendation.
+6. A customer-safe follow-up email can be opened from the summary.
+
+## Demo
+
+Use **Vyzkoušet demo MINIT** on the first screen. It demonstrates the intended three-speaker workflow without requiring a backend.
+
+## AI backend
+
+`config.js` intentionally contains no API key. GitHub Pages is a static frontend and must never expose a private AI key. Set `window.HOPI_CONFIG.apiUrl` only after deploying a secure backend that accepts an audio file on `POST /process-meeting` and returns speaker segments plus a structured summary.
+
+Without a configured backend the application still records audio and can use the browser's local speech recognition as a fallback, but it cannot genuinely distinguish multiple speakers.
 
 ## PWA
 
-Projekt obsahuje `manifest.webmanifest` a `sw.js`, takže jej lze po publikování přes HTTPS přidat na plochu iPhonu jako webovou aplikaci.
+The project contains a web app manifest and service worker, so after publishing over HTTPS it can be added to the iPhone Home Screen from Safari.
 
-## GitHub Pages
-
-Publikuj obsah větve `main` z kořene repozitáře přes GitHub Pages. Výsledná adresa bude typicky:
-
-`https://maxsis1-sudo.github.io/AI-Jarvis/`
-
-## Důležité omezení MVP
-
-Živý speech-to-text závisí na podpoře Web Speech API v konkrétním prohlížeči. Audio záznam používá `MediaRecorder`. Pro spolehlivý přepis dlouhých meetingů, AI sumarizaci a skutečné automatické odeslání e-mailu je vhodné v další verzi přidat zabezpečený backend/transkripční API.
-
-> Před nahráváním informuj účastníky a postupuj podle firemních pravidel a platných předpisů.
-
-Původní SwiftUI prototyp zůstává v repozitáři jako alternativní nativní varianta.
+> Before recording, inform meeting participants and follow company policy and applicable rules.
