@@ -5,121 +5,118 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#00843d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="HOPI Meeting" />
-  <meta name="description" content="HOPI Meeting Listener – meeting, řečníci, shrnutí, úkoly a follow-up." />
+  <meta name="description" content="HOPI Meeting Assistant – lokální meeting brief bez externího API." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="styles.css" />
-  <title>HOPI Meeting Listener</title>
+  <title>HOPI Meeting Assistant</title>
 </head>
 <body>
-  <main class="app-shell">
-    <header class="topbar">
-      <a class="hopi-logo" href="#" aria-label="HOPI"><span>HOPI</span><sup>®</sup></a>
-      <div class="topbar-copy"><strong>Meeting Assistant</strong><span>poslech → řečníci → shrnutí → follow-up</span></div>
-      <span id="onlinePill" class="pill">online</span>
+  <main class="phone-app">
+    <header class="app-header">
+      <div class="brand"><div class="logo">HOPI<sup>®</sup></div><div><strong>Meeting Assistant</strong><small id="modeLabel">Lokální režim · bez externího API</small></div></div>
+      <button id="settingsTopBtn" class="icon-btn" aria-label="Nastavení">⚙</button>
     </header>
 
-    <section id="setupCard" class="card setup-card">
-      <div class="eyebrow">NOVÝ MEETING</div>
-      <h1>Ty mluv. Asistent si vezme zbytek.</h1>
-      <p class="lead">Nejde o stenozáznam. Cílem je zachytit, <b>kdo co řekl</b>, a po meetingu vytáhnout jen to, co je důležité pro další práci.</p>
-
-      <div class="form-grid">
-        <label><span>Zákazník / název meetingu</span><input id="meetingName" autocomplete="organization" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA" /></label>
-        <label><span>E-mail pro zápis</span><input id="emailTo" type="email" autocomplete="email" placeholder="např. roman@hopi.cz" /></label>
+    <section id="homeView" class="view active">
+      <div class="hero-card">
+        <div class="status-chip">✓ Lokální zpracování</div>
+        <h1>Nový meeting</h1>
+        <p>Nahraj schůzku, pojmenuj účastníky a dostaneš stručný meeting brief místo stenozáznamu.</p>
+        <label class="field"><span>Zákazník / název meetingu</span><input id="meetingName" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA"></label>
+        <label class="field"><span>E-mail pro follow-up</span><input id="emailTo" type="email" placeholder="zakaznik@firma.cz"></label>
+        <div class="privacy-note">🔒 Audio a přepis zůstávají v zařízení. Nic se samo neodesílá.</div>
+        <button id="startBtn" class="primary big">● Spustit nahrávání</button>
+        <button id="demoBtn" class="secondary">Vyzkoušet demo MINIT</button>
       </div>
-
-      <div class="feature-strip">
-        <div><b>01</b><span>Rozliší řečníky</span></div>
-        <div><b>02</b><span>Ty je pojmenuješ</span></div>
-        <div><b>03</b><span>AI udělá shrnutí</span></div>
-      </div>
-
-      <div class="consent-note"><span class="info-icon">i</span><span>Před spuštěním informuj účastníky, že je schůzka zaznamenávána, a postupuj podle firemních pravidel.</span></div>
-
-      <button id="startBtn" class="primary-btn hero-btn"><span class="mic-icon">●</span> SPUSTIT MEETING</button>
-      <button id="demoBtn" class="secondary-btn demo-btn">▶ VYZKOUŠET DEMO MINIT</button>
-
-      <div id="installHint" class="install-hint"><strong>iPhone:</strong> Safari → Sdílet → <b>Přidat na plochu</b>.</div>
     </section>
 
-    <section id="recordingCard" class="card recording-card hidden" aria-live="polite">
-      <div class="recording-head">
-        <div><div class="eyebrow live-label"><span class="live-dot"></span> PROBÍHÁ MEETING</div><h2 id="activeMeetingName">MINIT BOHEMIA</h2></div>
-        <button id="wakeBtn" class="ghost-btn small-btn" type="button">Displej zapnutý</button>
+    <section id="recordView" class="view">
+      <div class="record-screen">
+        <div class="eyebrow">NAHRÁVÁNÍ MEETINGU</div>
+        <h2 id="recordTitle">MINIT BOHEMIA</h2>
+        <div id="timer" class="record-time">00:00</div>
+        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <strong>Nahrávání probíhá…</strong>
+        <p>Mluvte přirozeně. Aplikace průběžně vytváří lokální kontrolní přepis.</p>
+        <button id="stopBtn" class="stop-round">■</button>
+        <span class="stop-label">Ukončit nahrávání</span>
+        <details class="transcript-details"><summary>Kontrolní přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
       </div>
-      <div class="recorder-center">
-        <div class="pulse-wrap"><div class="pulse-ring ring-1"></div><div class="pulse-ring ring-2"></div><div class="record-core">🎙️</div></div>
-        <div id="timer" class="timer">00:00:00</div><div id="recStatus" class="rec-status">Poslouchám…</div>
-      </div>
-      <div class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <details class="transcript-drawer"><summary>Kontrolní živý přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript-box">Čekám na první slova…</div></details>
-      <button id="stopBtn" class="danger-btn">■ UKONČIT MEETING</button>
     </section>
 
-    <section id="processingCard" class="card processing-card hidden">
-      <div class="spinner"></div><h2>Analyzuji meeting…</h2>
-      <div class="processing-steps"><span class="done">✓ Audio</span><span>→</span><span>Řečníci</span><span>→</span><span>Klíčové body</span></div>
-      <p id="processingText">Hledám změny řečníků a připravuji podklady pro shrnutí.</p>
+    <section id="processView" class="view">
+      <div class="process-screen">
+        <div class="brain">⌁</div>
+        <h2>Zpracovávám nahrávku</h2>
+        <div class="process-list">
+          <div class="done">✓ <span>Přepis řeči</span></div>
+          <div class="done">✓ <span>Rozdělení řečových bloků</span></div>
+          <div id="processSummaryStep">◌ <span>Analýza a shrnutí</span></div>
+        </div>
+        <div class="info-box">Lokálně obvykle hotovo během několika sekund.</div>
+      </div>
     </section>
 
-    <section id="speakersCard" class="card speakers-card hidden">
-      <div class="result-head">
-        <div><div class="eyebrow">ROZPOZNANÍ ŘEČNÍCI</div><h2>Kdo byl kdo?</h2><p class="muted">Stačí je pojmenovat. Jména se okamžitě promítnou do celého shrnutí.</p></div>
-        <span id="speakerCountBadge" class="success-badge">3 hlasy</span>
-      </div>
+    <section id="speakersView" class="view">
+      <div class="page-head"><div><div class="eyebrow">ÚČASTNÍCI</div><h2>Přiřaďte jména k řečníkům</h2></div><span class="badge">bez API</span></div>
+      <p class="helper">V bez‑API režimu aplikace vytváří lokální řečové bloky, ale hlasovou identitu nepotvrzuje. Jména doplníš ty a propíšou se do úkolů i výstupu.</p>
       <div id="speakerList" class="speaker-list"></div>
-      <button id="applySpeakersBtn" class="primary-btn">POUŽÍT JMÉNA A ZOBRAZIT SHRNUTÍ →</button>
-      <button id="skipSpeakersBtn" class="text-btn">Ponechat Řečník 1, 2, 3</button>
+      <div class="speaker-count-row"><button id="removeSpeakerBtn" class="mini">−</button><span id="speakerCountLabel">3 řečníci</span><button id="addSpeakerBtn" class="mini">+</button></div>
+      <button id="applySpeakersBtn" class="primary">Potvrdit a pokračovat</button>
     </section>
 
-    <section id="resultCard" class="card result-card hidden">
-      <div class="result-head">
-        <div><div class="eyebrow">MEETING BRIEF JE PŘIPRAVEN</div><h2 id="resultTitle">MINIT BOHEMIA</h2><p id="resultMeta" class="muted"></p></div>
-        <span class="success-badge">✓ hotovo</span>
+    <section id="doneView" class="view">
+      <div class="done-screen">
+        <div class="check-ring">✓</div>
+        <h2>Hotovo!</h2>
+        <p>Váš meeting brief je připraven.</p>
+        <button id="showBriefBtn" class="primary">Zobrazit shrnutí</button>
+        <button id="quickMailBtn" class="secondary">Otevřít follow-up e-mail</button>
       </div>
-
-      <div class="executive-card">
-        <span class="executive-label">HLAVNÍ ZÁVĚR</span>
-        <p id="executiveSummary"></p>
-      </div>
-
-      <div id="metrics" class="metric-grid"></div>
-      <div id="summary" class="summary"></div>
-
-      <div class="insight-card">
-        <div class="insight-icon">✦</div>
-        <div><span>INTERNÍ AI POHLED</span><p id="aiRecommendation"></p></div>
-      </div>
-
-      <details class="transcript-drawer transcript-result">
-        <summary>Zdroj / přepis podle řečníků <span id="resultWordCount"></span></summary>
-        <div id="speakerTranscript" class="speaker-transcript"></div>
-      </details>
-
-      <div id="audioBox" class="audio-box hidden"><span>Audio záznam</span><audio id="audioPlayback" controls></audio></div>
-
-      <div class="result-actions">
-        <button id="emailBtn" class="primary-btn">✉ PŘIPRAVIT FOLLOW-UP E-MAIL</button>
-        <button id="shareBtn" class="secondary-btn">↗ Sdílet</button>
-        <button id="copyBtn" class="secondary-btn">Kopírovat</button>
-      </div>
-      <button id="newBtn" class="text-btn">+ Nový meeting</button>
     </section>
 
-    <section id="supportCard" class="support-card hidden">
-      <strong>Poznámka k AI rozpoznání řečníků</strong>
-      <span>Webové rozhraní je na diarizaci připravené. Skutečné rozlišení více hlasů vyžaduje zabezpečený AI backend; bez něj aplikace používá lokální přepis jako jeden hlas. Tlačítko Demo ukazuje finální zamýšlený tok se třemi řečníky.</span>
+    <section id="briefView" class="view brief-view">
+      <div class="brief-top"><button id="briefBackBtn" class="link-btn">‹ Zpět</button><strong>Meeting Brief</strong><button id="shareBtn" class="icon-btn">↗</button></div>
+      <div class="tabs"><button class="tab active" data-tab="summary">SHRNUTÍ</button><button class="tab" data-tab="source">PŘEPIS (KONTROLA)</button></div>
+      <div id="summaryTab" class="tab-panel active">
+        <section class="brief-section main-conclusion"><h3>✓ Hlavní závěr</h3><p id="executiveSummary"></p></section>
+        <section class="brief-section"><h3>● Dohodnuto</h3><ul id="decisionsList"></ul></section>
+        <section class="brief-section"><h3>● Úkoly</h3><div id="tasksTable" class="tasks-table"></div></section>
+        <section class="brief-section"><h3>● Požadavky zákazníka</h3><ul id="requestsList"></ul></section>
+        <section class="brief-section"><h3>● Pozice HOPI</h3><ul id="hopiList"></ul></section>
+        <section class="brief-section"><h3>● Rizika</h3><ul id="risksList"></ul></section>
+        <section class="brief-section internal"><h3>! Interní AI pohled</h3><p id="recommendation"></p></section>
+        <section class="brief-section"><h3>✉ Follow-up</h3><ul id="followupList"></ul></section>
+      </div>
+      <div id="sourceTab" class="tab-panel"><div id="sourceTranscript" class="source-transcript"></div></div>
+      <div class="brief-actions"><button id="copyBtn" class="secondary">Kopírovat</button><button id="emailBtn" class="primary">Outlook e-mail</button><button id="pdfBtn" class="secondary">Uložit PDF</button></div>
     </section>
 
-    <footer>HOPI Meeting Assistant · minimalistický KAM meeting workflow</footer>
+    <section id="meetingsView" class="view">
+      <div class="page-head"><div><div class="eyebrow">HISTORIE</div><h2>Moje meetingy</h2></div><span id="historyCount" class="badge">0</span></div>
+      <div id="meetingHistory" class="history-list"></div>
+    </section>
+
+    <section id="settingsView" class="view">
+      <div class="page-head"><div><div class="eyebrow">NASTAVENÍ</div><h2>Lokální režim</h2></div><span class="badge green">bez API</span></div>
+      <div class="settings-card"><h3>🔒 Soukromí</h3><p>Nahrávka se v této verzi nikam automaticky neodesílá. Historie meetingů se ukládá pouze do lokálního úložiště prohlížeče.</p></div>
+      <div class="settings-card"><h3>🎙 Přepis</h3><p>Pokud prohlížeč podporuje Web Speech, používá se lokální/průběžný přepis. Na iPhonu může přesnost záviset na Safari a systémovém nastavení.</p></div>
+      <div class="settings-card"><h3>👥 Řečníci</h3><p>Bez samostatného hlasového modelu se identity hlasů neurčují spolehlivě. Proto aplikace nechává pojmenování účastníků na tobě.</p></div>
+      <button id="clearHistoryBtn" class="danger-line">Smazat historii meetingů</button>
+    </section>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="homeView"><span>◉</span>Nahrávat</button>
+      <button class="nav-btn" data-view="meetingsView"><span>▣</span>Moje meetingy</button>
+      <button class="nav-btn" data-view="settingsView"><span>⚙</span>Nastavení</button>
+    </nav>
   </main>
-  <div id="toast" class="toast" role="status"></div>
-  <script src="config.js"></script>
+
+  <div id="toast" class="toast"></div>
   <script src="app.js"></script>
-  <script src="outlook.js"></script>
 </body>
 </html>
