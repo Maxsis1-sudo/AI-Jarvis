@@ -16,28 +16,38 @@
 </head>
 <body>
   <main class="phone-app">
-    <header class="app-header">
-      <div class="brand"><div class="logo">HOPI<sup>®</sup></div><div><strong>Meeting Assistant</strong><small id="modeLabel">Připravuji zpracování…</small></div></div>
+    <header class="app-header simple-header">
+      <div class="brand"><div class="logo">HOPI<sup>®</sup></div><div><strong>Meeting Assistant</strong></div></div>
       <button id="settingsTopBtn" class="icon-btn" aria-label="Nastavení">⚙</button>
     </header>
 
     <section id="homeView" class="view active">
-      <div class="hero-card">
-        <div class="status-chip">◌ Kontroluji připravenost</div>
+      <div class="hero-card simple-home">
+        <div class="ready-card">
+          <div class="ready-icon">✓</div>
+          <div><strong id="modeLabel">Připraveno</strong><span>Aplikace je připravena k nahrávání</span></div>
+        </div>
+
         <h1>Nový meeting</h1>
-        <p>Nahraj jednání. Po ukončení aplikace rozpozná řečníky a připraví stručný Meeting Brief s úkoly a follow-upem.</p>
-        <label class="field"><span>Zákazník / název meetingu</span><input id="meetingName" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA"></label>
-        <label class="field"><span>E-mail pro follow-up</span><input id="emailTo" type="email" placeholder="zakaznik@firma.cz"></label>
-        <div class="privacy-note">🔒 Zpracování probíhá zabezpečeně. Před odesláním výstupu vždy potvrdíš jména řečníků a finální shrnutí.</div>
-        <button id="startBtn" class="primary big">● Spustit nahrávání</button>
-        <button id="demoBtn" class="secondary">Vyzkoušet demo MINIT</button>
+        <p>Nahraj své jednání. Po ukončení aplikace rozpozná řečníky a připraví strukturovaný Meeting Brief s úkoly a follow-upem.</p>
+
+        <label class="field home-field"><span>Název meetingu <em>(volitelné)</em></span><input id="meetingName" value="" placeholder="Např. MINIT BOHEMIA" autocomplete="off"></label>
+        <label class="field home-field"><span>E-mail pro follow-up <em>(volitelné)</em></span><input id="emailTo" type="email" value="" placeholder="např. zakaznik@firma.cz" autocomplete="email"></label>
+
+        <div class="security-card">
+          <div class="security-icon">🔒</div>
+          <div><strong>Vaše data jsou v bezpečí</strong><span>Nahrávka se používá pouze pro zpracování meetingu. Před finálním výstupem vždy potvrdíš jména řečníků a shrnutí.</span></div>
+        </div>
+
+        <button id="startBtn" class="primary big home-primary">🎙 Spustit nahrávání</button>
+        <button id="homeMeetingsBtn" class="secondary home-secondary">▣ Moje meetingy</button>
       </div>
     </section>
 
     <section id="recordView" class="view">
       <div class="record-screen">
         <div class="eyebrow">NAHRÁVÁNÍ MEETINGU</div>
-        <h2 id="recordTitle">MINIT BOHEMIA</h2>
+        <h2 id="recordTitle">Meeting</h2>
         <div id="timer" class="record-time">00:00</div>
         <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <strong>Nahrávání probíhá…</strong>
