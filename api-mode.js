@@ -148,6 +148,42 @@
     state.analysis = mapSummary(data.summary, segments);
   }
 
+  function addSpeakerAudioSample(card, speaker) {
+    if (!state.audioUrl || !speaker?.id) return;
+    const segments = api.lastData?.segments || [];
+    const candidates = segments.filter(seg => seg.speakerId === speaker.id && Number(seg.end || 0) > Number(seg.start || 0));
+    const sample = candidates.find(seg => Number(seg.end) - Number(seg.start) >= 2) || candidates[0];
+    if (!sample) return;
+
+    const start = Math.max(0, Number(sample.start || 0));
+    const stop = Math.max(start + 1, Math.min(Number(sample.end || start + 6), start + 6));
+    const wrap = document.createElement('div');
+    wrap.style.marginTop = '8px';
+    const label = document.createElement('div');
+    label.className = 'speaker-meta';
+    label.textContent = 'Ukázka hlasu';
+    label.style.marginBottom = '4px';
+    const audioEl = document.createElement('audio');
+    audioEl.controls = true;
+    audioEl.preload = 'metadata';
+    audioEl.src = state.audioUrl;
+    audioEl.style.width = '100%';
+    audioEl.style.height = '34px';
+    audioEl.addEventListener('play', () => {
+      if (audioEl.currentTime < start - 0.3 || audioEl.currentTime > stop) {
+        try { audioEl.currentTime = start; } catch {}
+      }
+    });
+    audioEl.addEventListener('timeupdate', () => {
+      if (audioEl.currentTime >= stop) {
+        audioEl.pause();
+        try { audioEl.currentTime = start; } catch {}
+      }
+    });
+    wrap.append(label, audioEl);
+    card.appendChild(wrap);
+  }
+
   function enhanceSpeakerCards() {
     const speakers = api.lastData?.speakers || [];
     document.querySelectorAll('#speakerList .speaker-card').forEach((card, i) => {
@@ -157,9 +193,10 @@
       if (quote && s.quote) quote.textContent = `„${s.quote}“`;
       const metas = card.querySelectorAll('.speaker-meta');
       if (metas.length > 1) metas[metas.length - 1].textContent = `${Math.round(Number(s.seconds || 0))} s`;
+      addSpeakerAudioSample(card, s);
     });
     const helper = document.querySelector('#speakersView .helper');
-    if (helper) helper.textContent = `Rozpoznáno ${speakers.length || state.speakerCount} řečníků. Doplň jména; propíšou se do úkolů i přepisu.`;
+    if (helper) helper.textContent = `Rozpoznáno ${speakers.length || state.speakerCount} řečníků. Pusť si ukázku hlasu a doplň jména; propíšou se do úkolů i přepisu.`;
   }
 
   function mapNamedOwners() {
@@ -219,6 +256,9 @@
     setProcess('working', 'Ukončuji nahrávku…');
     const audio = await finishRecorder();
     if (!audio.size) throw new Error('Audio záznam je prázdný.');
+
+    try { if (state.audioUrl) URL.revokeObjectURL(state.audioUrl); } catch {}
+    state.audioUrl = URL.createObjectURL(audio);
 
     setProcess('working', 'Nahrávám meeting ke zpracování…');
     const form = new FormData();
