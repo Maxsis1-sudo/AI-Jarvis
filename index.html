@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="HOPI Meeting" />
-  <meta name="description" content="HOPI Meeting Assistant – lokální meeting brief a rozdělení hlasů bez externího API." />
+  <meta name="description" content="HOPI Meeting Assistant – přepis, řečníci a AI Meeting Brief." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -17,21 +17,20 @@
 <body>
   <main class="phone-app">
     <header class="app-header">
-      <div class="brand"><div class="logo">HOPI<sup>®</sup></div><div><strong>Meeting Assistant</strong><small id="modeLabel">Lokální režim · bez externího API</small></div></div>
+      <div class="brand"><div class="logo">HOPI<sup>®</sup></div><div><strong>Meeting Assistant</strong><small id="modeLabel">Kontroluji AI server…</small></div></div>
       <button id="settingsTopBtn" class="icon-btn" aria-label="Nastavení">⚙</button>
     </header>
 
     <section id="homeView" class="view active">
       <div class="hero-card">
-        <div class="status-chip">✓ Lokální zpracování</div>
+        <div class="status-chip">◌ Kontroluji API</div>
         <h1>Nový meeting</h1>
-        <p>Nahraj schůzku, nech aplikaci navrhnout hlasové skupiny, pojmenuj účastníky a dostaneš stručný Meeting Brief místo stenozáznamu.</p>
+        <p>Nahraj schůzku. AI po ukončení vytvoří přepis, rozliší řečníky a připraví stručný Meeting Brief.</p>
         <label class="field"><span>Zákazník / název meetingu</span><input id="meetingName" value="MINIT BOHEMIA" placeholder="Např. MINIT BOHEMIA"></label>
         <label class="field"><span>E-mail pro follow-up</span><input id="emailTo" type="email" placeholder="zakaznik@firma.cz"></label>
-        <div class="privacy-note">🔒 Nahrávku ani AI shrnutí neposíláme na vlastní server. AI modely běží v telefonu; při prvním použití se pouze stáhnou jejich soubory.</div>
+        <div class="privacy-note">☁ Po ukončení se audio odešle přes zabezpečené HTTPS na náš Render server a následně do OpenAI API pro přepis, rozlišení řečníků a vytvoření Meeting Briefu. API klíč není uložený v telefonu.</div>
         <div class="local-ai-home">
-          <div><strong>✦ AI shrnutí přímo v iPhonu</strong><small id="localAiHomeStatus">Jednorázově aktivuj lokální model pro generativní Meeting Brief.</small></div>
-          <button id="localAiHomeBtn" type="button">Aktivovat AI</button>
+          <div><strong>✦ Serverová AI</strong><small>Výkon telefonu už neomezuje kvalitu ani rychlost AI modelu. U bezplatného Renderu může první požadavek chvíli probouzet server.</small></div>
         </div>
         <button id="startBtn" class="primary big">● Spustit nahrávání</button>
         <button id="demoBtn" class="secondary">Vyzkoušet demo MINIT</button>
@@ -45,39 +44,39 @@
         <div id="timer" class="record-time">00:00</div>
         <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <strong>Nahrávání probíhá…</strong>
-        <p>Mluvte přirozeně. Aplikace průběžně vytváří kontrolní přepis a při zapnutém hlasovém modelu si ukládá krátké lokální vzorky pro rozdělení řečníků.</p>
+        <p>Mluvte přirozeně. Po ukončení se celá nahrávka zpracuje přes AI.</p>
         <button id="stopBtn" class="stop-round">■</button>
         <span class="stop-label">Ukončit nahrávání</span>
-        <details class="transcript-details"><summary>Kontrolní přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
+        <details class="transcript-details"><summary>Kontrolní živý přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
       </div>
     </section>
 
     <section id="processView" class="view">
       <div class="process-screen">
         <div class="brain">⌁</div>
-        <h2>Zpracovávám nahrávku</h2>
+        <h2>Zpracovávám meeting</h2>
         <div class="process-list">
-          <div class="done">✓ <span>Přepis řeči</span></div>
-          <div class="done">✓ <span>Řečové bloky / hlasové vzorky</span></div>
-          <div id="processSummaryStep">◌ <span>Analýza a shrnutí</span></div>
+          <div>◌ <span>Nahrávka</span></div>
+          <div>◌ <span>Přepis + rozpoznání řečníků</span></div>
+          <div id="processSummaryStep">◌ <span>AI Meeting Brief</span></div>
         </div>
-        <div class="info-box">Generativní AI běží v samostatném vlákně. Pokud je telefon příliš pomalý, aplikace po časovém limitu automaticky použije rychlé lokální shrnutí.</div>
+        <div class="info-box">Audio se zpracovává na serveru. U prvního požadavku může bezplatný Render potřebovat chvíli na probuzení.</div>
       </div>
     </section>
 
     <section id="speakersView" class="view">
-      <div class="page-head"><div><div class="eyebrow">ÚČASTNÍCI</div><h2>Přiřaďte jména k řečníkům</h2></div><span class="badge">lokálně</span></div>
-      <p class="helper">Pokud je zapnuté lokální rozpoznání hlasů, aplikace navrhne skupiny Řečník 1 / 2 / 3 podle podobnosti hlasu. Ty jen potvrdíš jména. Nejde o biometrické potvrzení identity.</p>
+      <div class="page-head"><div><div class="eyebrow">ROZPOZNANÍ ŘEČNÍCI</div><h2>Kdo byl kdo?</h2></div><span class="badge">AI</span></div>
+      <p class="helper">AI rozdělí nahrávku podle hlasů. Ty pouze doplníš jména a ta se propíšou do úkolů i přepisu.</p>
       <div id="speakerList" class="speaker-list"></div>
       <div class="speaker-count-row"><button id="removeSpeakerBtn" class="mini">−</button><span id="speakerCountLabel">3 řečníci</span><button id="addSpeakerBtn" class="mini">+</button></div>
-      <button id="applySpeakersBtn" class="primary">Potvrdit a pokračovat</button>
+      <button id="applySpeakersBtn" class="primary">Potvrdit jména a pokračovat</button>
     </section>
 
     <section id="doneView" class="view">
       <div class="done-screen">
         <div class="check-ring">✓</div>
         <h2>Hotovo!</h2>
-        <p>Váš Meeting Brief je připraven.</p>
+        <p>Meeting Brief je připraven.</p>
         <button id="showBriefBtn" class="primary">Zobrazit shrnutí</button>
         <button id="quickMailBtn" class="secondary">Otevřít follow-up e-mail</button>
       </div>
@@ -106,10 +105,10 @@
     </section>
 
     <section id="settingsView" class="view">
-      <div class="page-head"><div><div class="eyebrow">NASTAVENÍ</div><h2>Lokální režim</h2></div><span class="badge green">bez API</span></div>
-      <div class="settings-card"><h3>🔒 Soukromí</h3><p>Nahrávku ani Meeting Brief aplikace neposílá na vlastní backend. Lokální modely se při prvním použití stáhnou z internetu a inference potom probíhá v prohlížeči.</p></div>
-      <div class="settings-card"><h3>🎙 Přepis</h3><p>Kontrolní převod řeči na text využívá schopnosti konkrétního prohlížeče. Na iPhonu se dostupnost a způsob zpracování může lišit podle Safari a systémového nastavení.</p></div>
-      <div class="settings-card"><h3>👥 Řečníci</h3><p>Volitelný lokální hlasový model seskupuje krátké vzorky podle podobnosti hlasu. Výsledkem je návrh Řečník 1 / 2 / 3; jména vždy potvrzuje uživatel.</p></div>
+      <div class="page-head"><div><div class="eyebrow">NASTAVENÍ</div><h2>AI API režim</h2></div><span class="badge green">API</span></div>
+      <div class="settings-card"><h3>🔐 API klíč</h3><p>OpenAI API klíč je uložen pouze jako tajná Environment Variable na Render serveru. Do telefonu ani GitHubu se neposílá.</p></div>
+      <div class="settings-card"><h3>🎙 Zpracování</h3><p>Po ukončení meetingu server vytvoří přepis, rozliší řečníky a následně připraví strukturovaný Meeting Brief.</p></div>
+      <div class="settings-card"><h3>👥 Řečníci</h3><p>AI vrátí hlasové skupiny Řečník 1 / 2 / 3. Konkrétní jména před finálním výstupem potvrzuješ ty.</p></div>
       <button id="clearHistoryBtn" class="danger-line">Smazat historii meetingů</button>
     </section>
 
@@ -122,6 +121,6 @@
 
   <div id="toast" class="toast"></div>
   <script src="app.js"></script>
-  <script src="local-ai.js"></script>
+  <script src="api-mode.js"></script>
 </body>
 </html>
