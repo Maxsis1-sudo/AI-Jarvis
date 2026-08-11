@@ -13,6 +13,29 @@
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="styles.css" />
   <title>HOPI Meeting Assistant</title>
+  <style>
+    /* Premium mobile homepage only */
+    #homeView{position:relative;overflow:hidden;padding-top:18px}
+    #homeView:before{content:"";position:absolute;right:-120px;top:95px;width:330px;height:330px;border-radius:50%;background:radial-gradient(circle,rgba(0,132,61,.13),rgba(0,132,61,0) 68%);pointer-events:none}
+    #homeView:after{content:"";position:absolute;right:-35px;top:145px;width:240px;height:150px;border-radius:50%;border-top:1px solid rgba(0,132,61,.10);border-right:1px solid rgba(0,132,61,.08);transform:rotate(-18deg);pointer-events:none}
+    .simple-header{height:86px;padding-left:20px;padding-right:20px;border-bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}
+    .simple-header .logo{width:58px;height:58px;font-size:21px;border-radius:3px;box-shadow:0 8px 22px rgba(0,132,61,.14)}
+    .simple-header .brand{gap:14px}.simple-header .brand strong{font-size:20px;letter-spacing:-.4px}
+    .simple-home{position:relative;z-index:1;padding:4px 2px 18px}
+    .ready-card{width:max-content;max-width:100%;display:flex;align-items:center;gap:10px;background:rgba(247,251,248,.96);border:1px solid #dfeae2;border-radius:18px;padding:12px 15px;margin:3px 0 28px;box-shadow:0 8px 24px rgba(15,55,31,.05)}
+    .ready-icon{width:12px;height:12px;border:0;border-radius:50%;background:#079447;color:transparent;box-shadow:0 0 0 5px rgba(0,132,61,.08);flex:0 0 auto}
+    .ready-card strong{display:block;color:#087d3d;font-size:14px;margin-bottom:1px}.ready-card span{display:block;color:#69786e;font-size:11px}
+    .meeting-card{background:rgba(255,255,255,.97);border:1px solid #edf2ee;border-radius:28px;padding:24px 20px 22px;box-shadow:0 20px 55px rgba(18,54,32,.10);position:relative;overflow:hidden}
+    .meeting-card:before{content:"";position:absolute;right:-45px;top:-45px;width:140px;height:140px;border-radius:50%;background:rgba(0,132,61,.045)}
+    .meeting-icon{width:56px;height:56px;border-radius:18px;background:#e7f5ec;color:#00843d;display:grid;place-items:center;font-size:28px;margin-bottom:22px;position:relative;z-index:1}
+    .simple-home h1{font-size:42px;letter-spacing:-1.6px;margin:0 0 10px;line-height:1.04}.simple-home .intro{color:#6f7b73;font-size:15px;line-height:1.55;margin:0 0 24px;max-width:500px}
+    .home-field{margin:17px 0}.home-field span{font-size:13px}.home-field em{font-style:normal;font-weight:500;color:#7d877f}.home-field input{font-size:16px;padding:17px 16px;border-radius:17px;background:#fff;border:1px solid #dce5de;box-shadow:inset 0 1px 0 rgba(16,34,25,.02)}
+    .home-field input:focus{border-color:#7fc29b;box-shadow:0 0 0 4px rgba(0,132,61,.07)}
+    .security-card{display:flex;align-items:flex-start;gap:13px;background:linear-gradient(135deg,#eff9f2,#f8fcf9);border:1px solid #dceee2;border-radius:20px;padding:16px;margin:20px 0 18px}
+    .security-icon{width:44px;height:44px;border-radius:15px;background:#daf1e2;display:grid;place-items:center;font-size:20px;flex:0 0 auto}.security-card strong{display:block;font-size:13px;margin-bottom:4px}.security-card span{display:block;color:#51645a;font-size:11px;line-height:1.5}
+    .home-primary{position:relative;overflow:hidden;font-size:18px!important;border-radius:19px!important;padding:19px!important;background:linear-gradient(135deg,#00843d,#069449)!important;box-shadow:0 16px 30px rgba(0,132,61,.24)!important;margin-top:4px}.home-primary:after{content:"";position:absolute;right:24px;top:50%;width:32px;height:28px;transform:translateY(-50%);opacity:.34;background:repeating-linear-gradient(90deg,rgba(255,255,255,.9) 0 3px,transparent 3px 7px);border-radius:8px}
+    @media(max-width:430px){#homeView{padding-left:16px;padding-right:16px}.simple-header{height:82px}.simple-header .logo{width:52px;height:52px}.simple-header .brand strong{font-size:18px}.meeting-card{padding:22px 18px 20px;border-radius:24px}.simple-home h1{font-size:38px}.ready-card{margin-bottom:22px}.meeting-icon{width:52px;height:52px;margin-bottom:18px}}
+  </style>
 </head>
 <body>
   <main class="phone-app">
@@ -28,11 +51,14 @@
           <div><strong id="modeLabel">Připraveno</strong><span>Aplikace je připravena k nahrávání</span></div>
         </div>
 
-        <h1>Nový meeting</h1>
-        <p>Nahraj své jednání. Po ukončení aplikace rozpozná řečníky a připraví strukturovaný Meeting Brief s úkoly a follow-upem.</p>
+        <div class="meeting-card">
+          <div class="meeting-icon">🎙</div>
+          <h1>Nový meeting</h1>
+          <p class="intro">Nahraj jednání. Po ukončení aplikace rozpozná řečníky a připraví přehledný Meeting Brief s úkoly a follow-upem.</p>
 
-        <label class="field home-field"><span>Název meetingu <em>(volitelné)</em></span><input id="meetingName" value="" placeholder="Např. MINIT BOHEMIA" autocomplete="off"></label>
-        <label class="field home-field"><span>E-mail pro follow-up <em>(volitelné)</em></span><input id="emailTo" type="email" value="" placeholder="např. zakaznik@firma.cz" autocomplete="email"></label>
+          <label class="field home-field"><span>Název meetingu <em>(volitelné)</em></span><input id="meetingName" value="" placeholder="Např. MINIT BOHEMIA" autocomplete="off"></label>
+          <label class="field home-field"><span>E-mail pro follow-up <em>(volitelné)</em></span><input id="emailTo" type="email" value="" placeholder="např. zakaznik@firma.cz" autocomplete="email"></label>
+        </div>
 
         <div class="security-card">
           <div class="security-icon">🔒</div>
@@ -40,7 +66,6 @@
         </div>
 
         <button id="startBtn" class="primary big home-primary">🎙 Spustit nahrávání</button>
-        <button id="homeMeetingsBtn" class="secondary home-secondary" onclick="showView('meetingsView')">▣ Moje meetingy</button>
         <button id="demoBtn" hidden aria-hidden="true" tabindex="-1"></button>
       </div>
     </section>
