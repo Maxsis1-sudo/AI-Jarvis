@@ -204,6 +204,7 @@ Vrať POUZE validní JSON bez markdownu v tomto tvaru:
 
   const response = await client.responses.create({
     model: summaryModel,
+    store: false,
     instructions,
     input: `Meeting: ${meetingName}\n\nPŘEPIS PODLE ŘEČNÍKŮ:\n${transcriptForSummary}`
   });
