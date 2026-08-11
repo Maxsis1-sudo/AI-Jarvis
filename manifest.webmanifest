@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#00843d",
-  "description": "Mobilní meeting assistant: nahrávání, lokální přepis, stručný meeting brief, úkoly, historie a Outlook follow-up bez externího API.",
+  "description": "Mobilní meeting assistant pro nahrávání, rozpoznání řečníků, stručný Meeting Brief, úkoly, historii a follow-up e-mail.",
   "icons": [
     {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
   ]
