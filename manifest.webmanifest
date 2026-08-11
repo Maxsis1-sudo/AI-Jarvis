@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#00843d",
-  "description": "Mobilní meeting assistant pro nahrávání, rozpoznání řečníků, stručný Meeting Brief, úkoly, historii a follow-up e-mail.",
+  "description": "Mobilní KAM meeting copilot: nahrávání, stručný Meeting Brief, otevřené body, úkoly, historie zákazníků a follow-up.",
   "icons": [
     {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
   ]
