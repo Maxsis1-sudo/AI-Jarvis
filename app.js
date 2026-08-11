@@ -14,7 +14,7 @@ function showView(id){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===id));
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),2200)}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),3200)}
 function wc(text){return (String(text||'').trim().match(/\S+/g)||[]).length}
 function esc(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]))}
 function fmtTime(sec){sec=Math.max(0,Math.floor(sec||0));const m=String(Math.floor(sec/60)).padStart(2,'0');const s=String(sec%60).padStart(2,'0');return `${m}:${s}`}
@@ -23,7 +23,10 @@ function elapsed(){return state.startedAt?(Date.now()-state.startedAt)/1000:0}
 
 function resetMeeting(){
   try{if(state.audioUrl)URL.revokeObjectURL(state.audioUrl)}catch{}
-  state.chunks=[];state.audioUrl=null;state.transcript='';state.interim='';state.turns=[];state.analysis=null;state.names={};state.speakerCount=3;state.currentId=null;state.demo=false;
+  try{state.recognition?.abort()}catch{}
+  try{state.stream?.getTracks().forEach(t=>t.stop())}catch{}
+  state.recognition=null;state.recorder=null;state.stream=null;
+  state.chunks=[];state.audioUrl=null;state.transcript='';state.interim='';state.turns=[];state.analysis=null;state.names={};state.speakerCount=3;state.currentId=null;state.demo=false;state.recording=false;
   $('liveTranscript').textContent='Čekám na první slova…';$('wordCount').textContent='0 slov';$('timer').textContent='00:00';
 }
 
@@ -33,19 +36,26 @@ async function startMeeting(){
   $('recordTitle').textContent=name;
   try{
     if(!navigator.mediaDevices?.getUserMedia) throw new Error('Mikrofon není v tomto prohlížeči dostupný.');
-    state.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-    if(window.MediaRecorder){
-      const types=['audio/mp4','audio/webm;codecs=opus','audio/webm'];
-      const mime=types.find(t=>MediaRecorder.isTypeSupported?.(t));
-      state.recorder=mime?new MediaRecorder(state.stream,{mimeType:mime}):new MediaRecorder(state.stream);
-      state.recorder.ondataavailable=e=>{if(e.data?.size)state.chunks.push(e.data)};
-      state.recorder.start(1000);
-    }
+    state.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
+    if(!window.MediaRecorder) throw new Error('Nahrávání audia není v tomto prohlížeči podporované.');
+
+    const types=['audio/mp4','audio/webm;codecs=opus','audio/webm'];
+    const mime=types.find(t=>MediaRecorder.isTypeSupported?.(t));
+    const options={audioBitsPerSecond:32000};
+    if(mime) options.mimeType=mime;
+    try{state.recorder=new MediaRecorder(state.stream,options)}catch{state.recorder=mime?new MediaRecorder(state.stream,{mimeType:mime}):new MediaRecorder(state.stream)}
+    state.recorder.ondataavailable=e=>{if(e.data?.size)state.chunks.push(e.data)};
+    state.recorder.onerror=()=>toast('Nahrávání bylo přerušeno. Zkus meeting spustit znovu.');
+    state.recorder.start(1000);
+
     state.recording=true;state.startedAt=Date.now();state.timerId=setInterval(()=>$('timer').textContent=fmtTime(elapsed()),500);
     if(SpeechRecognition) startRecognition();
-    else toast('Živý přepis není v tomto prohlížeči dostupný. Audio se ale nahrává.');
+    else $('liveTranscript').textContent='Živý kontrolní přepis není dostupný. Finální přepis vytvoří AI po ukončení meetingu.';
     showView('recordView');
-  }catch(e){toast(e.message||'Nepodařilo se spustit mikrofon.')}
+  }catch(e){
+    try{state.stream?.getTracks().forEach(t=>t.stop())}catch{}
+    toast(e.message||'Nepodařilo se spustit mikrofon.');
+  }
 }
 
 function startRecognition(){
@@ -65,7 +75,7 @@ function startRecognition(){
     const all=[state.transcript,interim].filter(Boolean).join(' ');
     $('liveTranscript').textContent=all||'Čekám na první slova…';$('wordCount').textContent=`${wc(all)} slov`;
   };
-  r.onerror=e=>{if(!['no-speech','aborted'].includes(e.error))toast('Kontrolní přepis je dočasně přerušen.')};
+  r.onerror=e=>{if(!['no-speech','aborted'].includes(e.error))console.warn('Live transcript:',e.error)};
   r.onend=()=>{if(state.recording){try{r.start()}catch{}}};
   try{r.start();state.recognition=r}catch{}
 }
@@ -95,19 +105,19 @@ function buildLocalAnalysis(text){
   const risks=pick(all,/(rizik|problém|pokles|ztrát|zpožd|sankc|nedostatek|nevychází|nestíh|otevřen|nevíme|není potvrzen)/i,5);
   const follow=pick(all,/(příšt|další meeting|naváž|follow|ozv|pošl|potvrd|dořeš)/i,5);
   const important=uniq([...decisions,...tasksRaw,...requests,...all.filter(s=>s.length>55)]).slice(0,4);
-  const executive=important.length?important.slice(0,2).join(' '):'Meeting byl zaznamenán. Lokální přepis zatím neobsahuje dostatek jednoznačných bodů pro kvalitní shrnutí.';
+  const executive=important.length?important.slice(0,2).join(' '):'Meeting byl zaznamenán. Kontrolní přepis neobsahuje dostatek jednoznačných bodů pro přesné náhradní shrnutí.';
   const tasks=tasksRaw.map(t=>({task:t,owner:'',deadline:(t.match(/\b\d{1,2}[.\/]\s*\d{1,2}(?:[.\/]\s*\d{2,4})?/ )||[])[0]||''}));
   const recommendation=risks.length?'Před dalším krokem doporučuji potvrdit otevřené body a rizika a až poté uzavírat finální závazky.':'Doporučuji potvrdit vlastníky úkolů a termíny a poslat stručný follow-up všem účastníkům.';
   return {executive,decisions:decisions.length?decisions:['Bez jednoznačně zachyceného rozhodnutí.'],tasks,requests,hopi,risks,followup:follow.length?follow:['Potvrdit úkoly a termíny po meetingu.'],recommendation,source:all};
 }
 
 function renderSpeakers(){
-  const samples=state.turns.length?state.turns:state.analysis.source.map((text,i)=>({text,time:i*15}));
+  const samples=state.turns.length?state.turns:state.analysis?.source?.map((text,i)=>({text,time:i*15}))||[];
   const list=$('speakerList');list.innerHTML='';
   for(let i=0;i<state.speakerCount;i++){
-    const sample=samples[i]?.text||'Ukázka hlasu není v lokálním režimu spolehlivě dostupná.';
+    const sample=samples.find(x=>x.speakerIndex===i)?.text||samples[i]?.text||'Ukázka řečníka není dostupná.';
     const card=document.createElement('div');card.className='speaker-card';
-    card.innerHTML=`<div class="speaker-row"><div class="speaker-avatar">${i+1}</div><div><div class="speaker-meta">Řečník ${i+1}</div><input class="speaker-name" data-index="${i}" value="${esc(state.names[i]||'')}" placeholder="Jméno, např. Roman"></div><div class="speaker-meta">${fmtTime(samples[i]?.time||0)}</div></div><p class="speaker-sample">„${esc(sample)}“</p>`;
+    card.innerHTML=`<div class="speaker-row"><div class="speaker-avatar">${i+1}</div><div><div class="speaker-meta">Řečník ${i+1}</div><input class="speaker-name" data-index="${i}" value="${esc(state.names[i]||'')}" placeholder="Jméno, např. Roman"></div><div class="speaker-meta">${fmtTime(samples.find(x=>x.speakerIndex===i)?.time||samples[i]?.time||0)}</div></div><p class="speaker-sample">„${esc(sample)}“</p>`;
     list.appendChild(card);
   }
   $('speakerCountLabel').textContent=`${state.speakerCount} ${state.speakerCount===1?'řečník':state.speakerCount<5?'řečníci':'řečníků'}`;
@@ -122,10 +132,10 @@ function renderBrief(){
   $('recommendation').textContent=a.recommendation;
   const tt=$('tasksTable');tt.innerHTML='';
   if(!a.tasks.length)tt.innerHTML='<div class="task-row"><div>Bez konkrétního úkolu</div><div class="task-owner">—</div><div class="task-deadline">—</div></div>';
-  a.tasks.forEach((t,i)=>{const row=document.createElement('div');row.className='task-row';const owner=t.owner||state.names[0]||'Doplnit';row.innerHTML=`<div>${esc(t.task)}</div><div class="task-owner">${esc(owner)}</div><div class="task-deadline">${esc(t.deadline||'doplnit')}</div>`;tt.appendChild(row)});
+  a.tasks.forEach(t=>{const row=document.createElement('div');row.className='task-row';const owner=t.owner||'Doplnit';row.innerHTML=`<div>${esc(t.task)}</div><div class="task-owner">${esc(owner)}</div><div class="task-deadline">${esc(t.deadline||'doplnit')}</div>`;tt.appendChild(row)});
   const src=$('sourceTranscript');src.innerHTML='';
-  if(state.turns.length){state.turns.forEach((t,i)=>{const d=document.createElement('div');d.className='source-block';d.innerHTML=`<b>${esc(state.names[i%state.speakerCount]||`Řečník ${(i%state.speakerCount)+1}`)} · ${fmtTime(t.time)}</b><p>${esc(t.text)}</p>`;src.appendChild(d)})}
-  else a.source.forEach((t,i)=>{const d=document.createElement('div');d.className='source-block';d.innerHTML=`<b>Blok ${i+1}</b><p>${esc(t)}</p>`;src.appendChild(d)});
+  if(state.turns.length){state.turns.forEach((t,i)=>{const d=document.createElement('div');d.className='source-block';const idx=Number.isInteger(t.speakerIndex)?t.speakerIndex:i%state.speakerCount;d.innerHTML=`<b>${esc(t.speakerName||state.names[idx]||`Řečník ${idx+1}`)} · ${fmtTime(t.time)}</b><p>${esc(t.text)}</p>`;src.appendChild(d)})}
+  else (a.source||[]).forEach((t,i)=>{const d=document.createElement('div');d.className='source-block';d.innerHTML=`<b>Blok ${i+1}</b><p>${esc(t)}</p>`;src.appendChild(d)});
   saveCurrentMeeting();
   showView('briefView');
 }
@@ -136,15 +146,15 @@ function plainSummary(){
   const out=[`${name} – Meeting Brief`,dateLabel(),'','HLAVNÍ ZÁVĚR',a.executive,''];
   const add=(title,arr)=>{if(arr?.length){out.push(title,...arr.map(x=>'• '+x),'')}};
   add('DOHODNUTO',a.decisions);
-  if(a.tasks.length){out.push('ÚKOLY');a.tasks.forEach(t=>out.push(`• ${t.task} — ${t.owner||state.names[0]||'Doplnit'} — ${t.deadline||'doplnit'}`));out.push('')}
-  add('POŽADAVKY ZÁKAZNÍKA',a.requests);add('POZICE HOPI',a.hopi);add('RIZIKA',a.risks);add('FOLLOW-UP',a.followup);
+  if(a.tasks.length){out.push('ÚKOLY');a.tasks.forEach(t=>out.push(`• ${t.task} — ${t.owner||'Doplnit'} — ${t.deadline||'doplnit'}`));out.push('')}
+  add('POŽADAVKY ZÁKAZNÍKA',a.requests);add('POZICE HOPI',a.hopi);add('RIZIKA',a.risks);if(a.numbers?.length)add('DŮLEŽITÁ ČÍSLA',a.numbers);add('FOLLOW-UP',a.followup);
   return out.join('\n');
 }
 function customerEmail(){
   const a=state.analysis,name=$('meetingName').value.trim()||'Meeting';
   const out=['Dobrý den,','',`děkuji za dnešní jednání k tématu ${name}. Níže zasílám stručné shrnutí dohodnutých bodů:`,''];
   if(a.decisions.length){out.push('Dohodnuto:');a.decisions.forEach(x=>out.push('• '+x));out.push('')}
-  if(a.tasks.length){out.push('Další kroky:');a.tasks.forEach(t=>out.push(`• ${t.task}${t.deadline?' – '+t.deadline:''}`));out.push('')}
+  if(a.tasks.length){out.push('Další kroky:');a.tasks.forEach(t=>out.push(`• ${t.task}${t.owner?' – '+t.owner:''}${t.deadline?' – '+t.deadline:''}`));out.push('')}
   if(a.followup.length){out.push('Navazující témata:');a.followup.forEach(x=>out.push('• '+x));out.push('')}
   out.push('Děkuji a přeji hezký den.','','S pozdravem');return out.join('\n');
 }
@@ -168,17 +178,16 @@ function loadHistoryItem(item){resetMeeting();state.currentId=item.id;state.anal
 function startDemo(){
   resetMeeting();state.demo=true;state.speakerCount=3;$('meetingName').value='MINIT BOHEMIA';
   state.turns=[
-    {time:72,text:'Od září očekáváme nižší objem přeprav a potřebujeme potvrdit, jak se to promítne do ceny.'},
-    {time:115,text:'Za HOPI připravíme nový sjednocený ceník po potvrzení forecastu.'},
-    {time:180,text:'Penny Dobřany a Smiřice vyhodnotíme samostatně, protože nejde o standardní multi-stop.'},
-    {time:280,text:'MINIT dodá forecast do 13. 8. a HOPI připraví kalkulaci do 14. 8.'}
+    {time:72,text:'Od září očekáváme nižší objem přeprav a potřebujeme potvrdit, jak se to promítne do ceny.',speakerIndex:0},
+    {time:115,text:'Za HOPI připravíme nový sjednocený ceník po potvrzení forecastu.',speakerIndex:1},
+    {time:180,text:'Penny Dobřany a Smiřice vyhodnotíme samostatně, protože nejde o standardní multi-stop.',speakerIndex:2},
+    {time:280,text:'MINIT dodá forecast do 13. 8. a HOPI připraví kalkulaci do 14. 8.',speakerIndex:0}
   ];
   state.transcript=state.turns.map(x=>x.text).join(' ');
   state.analysis={executive:'MINIT očekává nižší objem přeprav. Finální cenový model bude uzavřen až po potvrzení forecastu a samostatném vyhodnocení nestandardních tras.',decisions:['MINIT dodá forecast.','HOPI připraví nový sjednocený ceník.','Penny Dobřany + Smiřice se vyhodnotí samostatně.'],tasks:[{task:'Dodat forecast',owner:'David',deadline:'13. 8.'},{task:'Připravit kalkulaci',owner:'Roman',deadline:'14. 8.'},{task:'Vyhodnotit PD + SM',owner:'Josef',deadline:'15. 8.'}],requests:['Transparentní cenový model.','Garance kvality služeb.','Flexibilita při změně objemů.'],hopi:['Udržet dlouhodobé partnerství a nabídnout stabilní a konkurenceschopné řešení.'],risks:['Nižší objem může zhoršit ekonomiku distribučního modelu.'],followup:['Po potvrzení forecastu uzavřít cenu a provozní model.'],recommendation:'Neuzavírat finální cenový závazek před potvrzením forecastu. Nejprve objem → provozní model → závazek → cena.',source:state.turns.map(x=>x.text)};
   state.names={0:'David',1:'Roman',2:'Josef'};showView('processView');setTimeout(()=>{renderSpeakers();showView('speakersView')},700)
 }
 
-// UI events
 $('startBtn').onclick=startMeeting;$('stopBtn').onclick=stopMeeting;$('demoBtn').onclick=startDemo;
 $('addSpeakerBtn').onclick=()=>{collectNames();state.speakerCount=Math.min(6,state.speakerCount+1);renderSpeakers()};
 $('removeSpeakerBtn').onclick=()=>{collectNames();state.speakerCount=Math.max(1,state.speakerCount-1);renderSpeakers()};
