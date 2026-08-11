@@ -5,158 +5,93 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#00843d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="HOPI Meeting" />
-  <meta name="description" content="HOPI Meeting Assistant – nahrávání, řečníci, shrnutí a follow-up." />
+  <meta name="description" content="HOPI Meeting Assistant – KAM copilot pro meetingy, úkoly a follow-up." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="styles.css" />
   <title>HOPI Meeting Assistant</title>
   <style>
-    /* Premium mobile homepage only */
-    #homeView{position:relative;overflow:hidden;padding-top:18px}
-    #homeView:before{content:"";position:absolute;right:-120px;top:95px;width:330px;height:330px;border-radius:50%;background:radial-gradient(circle,rgba(0,132,61,.13),rgba(0,132,61,0) 68%);pointer-events:none}
-    #homeView:after{content:"";position:absolute;right:-35px;top:145px;width:240px;height:150px;border-radius:50%;border-top:1px solid rgba(0,132,61,.10);border-right:1px solid rgba(0,132,61,.08);transform:rotate(-18deg);pointer-events:none}
-    .simple-header{height:86px;padding-left:20px;padding-right:20px;border-bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}
-    .simple-header .logo{width:58px;height:58px;font-size:21px;border-radius:3px;box-shadow:0 8px 22px rgba(0,132,61,.14)}
-    .simple-header .brand{gap:14px}.simple-header .brand strong{font-size:20px;letter-spacing:-.4px}
-    .simple-home{position:relative;z-index:1;padding:4px 2px 18px}
-    .ready-card{width:max-content;max-width:100%;display:flex;align-items:center;gap:10px;background:rgba(247,251,248,.96);border:1px solid #dfeae2;border-radius:18px;padding:12px 15px;margin:3px 0 28px;box-shadow:0 8px 24px rgba(15,55,31,.05)}
-    .ready-icon{width:12px;height:12px;border:0;border-radius:50%;background:#079447;color:transparent;box-shadow:0 0 0 5px rgba(0,132,61,.08);flex:0 0 auto}
-    .ready-card strong{display:block;color:#087d3d;font-size:14px;margin-bottom:1px}.ready-card span{display:block;color:#69786e;font-size:11px}
-    .meeting-card{background:rgba(255,255,255,.97);border:1px solid #edf2ee;border-radius:28px;padding:24px 20px 22px;box-shadow:0 20px 55px rgba(18,54,32,.10);position:relative;overflow:hidden}
-    .meeting-card:before{content:"";position:absolute;right:-45px;top:-45px;width:140px;height:140px;border-radius:50%;background:rgba(0,132,61,.045)}
-    .meeting-icon{width:56px;height:56px;border-radius:18px;background:#e7f5ec;color:#00843d;display:grid;place-items:center;font-size:28px;margin-bottom:22px;position:relative;z-index:1}
-    .simple-home h1{font-size:42px;letter-spacing:-1.6px;margin:0 0 10px;line-height:1.04}.simple-home .intro{color:#6f7b73;font-size:15px;line-height:1.55;margin:0 0 24px;max-width:500px}
-    .home-field{margin:17px 0}.home-field span{font-size:13px}.home-field em{font-style:normal;font-weight:500;color:#7d877f}.home-field input{font-size:16px;padding:17px 16px;border-radius:17px;background:#fff;border:1px solid #dce5de;box-shadow:inset 0 1px 0 rgba(16,34,25,.02)}
-    .home-field input:focus{border-color:#7fc29b;box-shadow:0 0 0 4px rgba(0,132,61,.07)}
-    .security-card{display:flex;align-items:flex-start;gap:13px;background:linear-gradient(135deg,#eff9f2,#f8fcf9);border:1px solid #dceee2;border-radius:20px;padding:16px;margin:20px 0 18px}
-    .security-icon{width:44px;height:44px;border-radius:15px;background:#daf1e2;display:grid;place-items:center;font-size:20px;flex:0 0 auto}.security-card strong{display:block;font-size:13px;margin-bottom:4px}.security-card span{display:block;color:#51645a;font-size:11px;line-height:1.5}
-    .home-primary{position:relative;overflow:hidden;font-size:18px!important;border-radius:19px!important;padding:19px!important;background:linear-gradient(135deg,#00843d,#069449)!important;box-shadow:0 16px 30px rgba(0,132,61,.24)!important;margin-top:4px}.home-primary:after{content:"";position:absolute;right:24px;top:50%;width:32px;height:28px;transform:translateY(-50%);opacity:.34;background:repeating-linear-gradient(90deg,rgba(255,255,255,.9) 0 3px,transparent 3px 7px);border-radius:8px}
-    @media(max-width:430px){#homeView{padding-left:16px;padding-right:16px}.simple-header{height:82px}.simple-header .logo{width:52px;height:52px}.simple-header .brand strong{font-size:18px}.meeting-card{padding:22px 18px 20px;border-radius:24px}.simple-home h1{font-size:38px}.ready-card{margin-bottom:22px}.meeting-icon{width:52px;height:52px;margin-bottom:18px}}
+    .simple-header{height:84px;padding:0 20px;border-bottom:1px solid #edf1ee;background:#fff}.simple-header .logo{width:54px;height:54px}.simple-header .brand strong{font-size:20px}
+    #homeView{padding:22px 16px}.home-card{background:#fff;border:1px solid #e7eee9;border-radius:26px;padding:22px;box-shadow:0 16px 38px rgba(18,54,32,.08)}
+    .home-card h1{font-size:38px;letter-spacing:-1.2px;margin:4px 0 10px}.home-card .intro{color:#6f7b73;line-height:1.55;margin-bottom:22px}.home-field{margin:16px 0}.home-field input{font-size:16px;padding:17px;border-radius:17px}
+    .ready-line{display:flex;align-items:center;gap:9px;color:#087d3d;font-size:13px;font-weight:800;margin-bottom:18px}.ready-dot{width:10px;height:10px;border-radius:50%;background:#0a984a;box-shadow:0 0 0 5px rgba(0,132,61,.08)}
+    .record-important{margin-top:22px}.marker-count{font-size:12px;color:#6f7b73;margin-top:8px}.brief-section.open{background:#fffaf0;border-color:#f3dfac}.brief-section.promises{background:#f1f9f4;border-color:#cfe8d8}.brief-section.changes{background:#f5f7fb;border-color:#dfe5ef}
+    .task-side{font-size:10px;font-weight:900;border-radius:999px;padding:3px 8px;background:#eef3ef;color:#52645a;display:inline-block;margin-top:5px}.task-side.HOPI{background:#e5f5eb;color:#087d3d}.task-side.CUSTOMER{background:#fff3df;color:#9b6200}
+    .compact-list{display:grid;gap:10px}.compact-card{border:1px solid #e3ebe5;border-radius:18px;padding:14px;background:#fff}.compact-card strong{display:block;margin-bottom:5px}.compact-card small{color:#718078}.customer-group{margin-bottom:18px}.customer-group h3{margin:0 0 10px}.promise-item{display:flex;gap:10px;align-items:flex-start}.promise-item input{margin-top:3px}.empty{padding:24px;text-align:center;color:#7c877f}
+    .bottom-nav{grid-template-columns:repeat(4,1fr)}.bottom-nav .nav-btn{font-size:10px}
+    @media(max-width:430px){.simple-header{height:80px}.simple-header .logo{width:50px;height:50px}.simple-header .brand strong{font-size:18px}.home-card h1{font-size:35px}}
   </style>
 </head>
 <body>
-  <main class="phone-app">
-    <header class="app-header simple-header">
-      <div class="brand"><div class="logo">HOPI<sup>®</sup></div><div><strong>Meeting Assistant</strong></div></div>
-      <button id="settingsTopBtn" class="icon-btn" aria-label="Nastavení">⚙</button>
-    </header>
+<main class="phone-app">
+  <header class="app-header simple-header">
+    <div class="brand"><div class="logo">HOPI<sup>®</sup></div><div><strong>Meeting Assistant</strong></div></div>
+    <button id="settingsTopBtn" class="icon-btn" aria-label="Nastavení">⚙</button>
+  </header>
 
-    <section id="homeView" class="view active">
-      <div class="hero-card simple-home">
-        <div class="ready-card">
-          <div class="ready-icon">✓</div>
-          <div><strong id="modeLabel">Připraveno</strong><span>Aplikace je připravena k nahrávání</span></div>
-        </div>
+  <section id="homeView" class="view active">
+    <div class="ready-line"><span class="ready-dot"></span><span id="modeLabel">Připraveno</span></div>
+    <div class="home-card">
+      <h1>Nový meeting</h1>
+      <p class="intro">Nahraj jednání. Po ukončení dostaneš stručný Meeting Brief, otevřené body, úkoly, důležitá čísla a follow-up.</p>
+      <label class="field home-field"><span>Zákazník / firma <em>(volitelné)</em></span><input id="customerName" value="" placeholder="Např. MINIT BOHEMIA" autocomplete="off"></label>
+      <label class="field home-field"><span>E-mail pro follow-up <em>(volitelné)</em></span><input id="emailTo" type="email" value="" placeholder="zakaznik@firma.cz" autocomplete="email"></label>
+      <button id="startBtn" class="primary big">🎙 Spustit nahrávání</button>
+    </div>
+  </section>
 
-        <div class="meeting-card">
-          <div class="meeting-icon">🎙</div>
-          <h1>Nový meeting</h1>
-          <p class="intro">Nahraj jednání. Po ukončení aplikace rozpozná řečníky a připraví přehledný Meeting Brief s úkoly a follow-upem.</p>
+  <section id="recordView" class="view">
+    <div class="record-screen">
+      <div class="eyebrow">NAHRÁVÁNÍ</div><h2 id="recordTitle">Meeting</h2>
+      <div id="timer" class="record-time">00:00</div>
+      <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <strong>Nahrávání probíhá…</strong><p>Mluv přirozeně. AI po skončení vytáhne jen podstatné věci.</p>
+      <button id="importantBtn" class="secondary record-important">★ Označit jako důležité</button>
+      <div id="markerCount" class="marker-count">0 označených momentů</div>
+      <button id="stopBtn" class="stop-round">■</button><span class="stop-label">Ukončit nahrávání</span>
+      <details class="transcript-details"><summary>Kontrolní živý přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
+    </div>
+  </section>
 
-          <label class="field home-field"><span>Název meetingu <em>(volitelné)</em></span><input id="meetingName" value="" placeholder="Např. MINIT BOHEMIA" autocomplete="off"></label>
-          <label class="field home-field"><span>E-mail pro follow-up <em>(volitelné)</em></span><input id="emailTo" type="email" value="" placeholder="např. zakaznik@firma.cz" autocomplete="email"></label>
-        </div>
+  <section id="processView" class="view"><div class="process-screen"><div class="brain">⌁</div><h2>Zpracovávám meeting</h2><div class="process-list"><div id="processUpload">◌ <span>Nahrávka</span></div><div id="processTranscript">◌ <span>Přepis</span></div><div id="processSummaryStep">◌ <span>Meeting Brief</span></div></div><div class="info-box">Zpracování může podle délky meetingu chvíli trvat.</div></div></section>
 
-        <div class="security-card">
-          <div class="security-icon">🔒</div>
-          <div><strong>Vaše data jsou v bezpečí</strong><span>Nahrávka se používá pouze pro zpracování meetingu. Před finálním výstupem vždy potvrdíš jména řečníků a shrnutí.</span></div>
-        </div>
+  <section id="briefView" class="view brief-view">
+    <div class="brief-top"><button id="briefBackBtn" class="link-btn">‹ Zpět</button><strong id="briefTitle">Meeting Brief</strong><button id="shareBtn" class="icon-btn">↗</button></div>
+    <div class="tabs"><button class="tab active" data-tab="summary">SHRNUTÍ</button><button class="tab" data-tab="source">PŘEPIS</button></div>
+    <div id="summaryTab" class="tab-panel active">
+      <section class="brief-section main-conclusion"><h3>✓ Hlavní závěr</h3><p id="executiveSummary"></p></section>
+      <section class="brief-section"><h3>● Dohodnuto</h3><ul id="decisionsList"></ul></section>
+      <section class="brief-section open"><h3>○ Otevřené body</h3><ul id="openPointsList"></ul></section>
+      <section class="brief-section"><h3>● Úkoly</h3><div id="tasksTable" class="tasks-table"></div></section>
+      <section class="brief-section promises"><h3>★ Co jsem slíbil</h3><ul id="promisesList"></ul></section>
+      <section class="brief-section changes" id="changesSection"><h3>↔ Změny od minula</h3><ul id="changesList"></ul></section>
+      <section class="brief-section"><h3>● Důležitá čísla</h3><ul id="numbersList"></ul></section>
+      <section class="brief-section"><h3>● Požadavky zákazníka</h3><ul id="requestsList"></ul></section>
+      <section class="brief-section"><h3>● Pozice HOPI</h3><ul id="hopiList"></ul></section>
+      <section class="brief-section"><h3>● Rizika</h3><ul id="risksList"></ul></section>
+      <section class="brief-section internal"><h3>! Interní AI pohled</h3><p id="recommendation"></p></section>
+      <section class="brief-section"><h3>✉ Follow-up</h3><ul id="followupList"></ul></section>
+    </div>
+    <div id="sourceTab" class="tab-panel"><div id="sourceTranscript" class="source-transcript"></div></div>
+    <div class="brief-actions"><button id="copyBtn" class="secondary">Kopírovat</button><button id="emailBtn" class="primary">Odeslat e-mail</button><button id="pdfBtn" class="secondary">Uložit PDF</button></div>
+  </section>
 
-        <button id="startBtn" class="primary big home-primary">🎙 Spustit nahrávání</button>
-        <button id="demoBtn" hidden aria-hidden="true" tabindex="-1"></button>
-      </div>
-    </section>
+  <section id="tasksView" class="view"><div class="page-head"><div><div class="eyebrow">FOLLOW-UP</div><h2>Co jsem slíbil</h2></div><span id="promiseCount" class="badge">0</span></div><div id="promiseList" class="compact-list"></div></section>
+  <section id="customersView" class="view"><div class="page-head"><div><div class="eyebrow">HISTORIE</div><h2>Zákazníci</h2></div><span id="historyCount" class="badge">0</span></div><div id="customerHistory"></div></section>
+  <section id="settingsView" class="view"><div class="page-head"><div><div class="eyebrow">NASTAVENÍ</div><h2>Meeting Assistant</h2></div></div><div class="settings-card"><h3>🔒 Zpracování</h3><p>Nahrávka se použije pro přepis a vytvoření Meeting Briefu. Aplikace nerozpoznává ani neukládá hlasové profily účastníků.</p></div><div class="settings-card"><h3>📋 Výstup</h3><p>Meeting Brief odděluje rozhodnutí, otevřené body, úkoly, čísla, rizika a interní doporučení.</p></div><button id="clearHistoryBtn" class="danger-line">Smazat historii meetingů</button></section>
 
-    <section id="recordView" class="view">
-      <div class="record-screen">
-        <div class="eyebrow">NAHRÁVÁNÍ MEETINGU</div>
-        <h2 id="recordTitle">Meeting</h2>
-        <div id="timer" class="record-time">00:00</div>
-        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        <strong>Nahrávání probíhá…</strong>
-        <p>Mluvte přirozeně. Po ukončení aplikace vytvoří přepis, rozliší řečníky a připraví shrnutí.</p>
-        <button id="stopBtn" class="stop-round">■</button>
-        <span class="stop-label">Ukončit nahrávání</span>
-        <details class="transcript-details"><summary>Kontrolní živý přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
-      </div>
-    </section>
-
-    <section id="processView" class="view">
-      <div class="process-screen">
-        <div class="brain">⌁</div>
-        <h2>Zpracovávám meeting</h2>
-        <div class="process-list">
-          <div>◌ <span>Nahrávka</span></div>
-          <div>◌ <span>Přepis a rozpoznání řečníků</span></div>
-          <div id="processSummaryStep">◌ <span>Analýza a Meeting Brief</span></div>
-        </div>
-        <div class="info-box">Zpracování může podle délky meetingu chvíli trvat. Tuto obrazovku nech otevřenou.</div>
-      </div>
-    </section>
-
-    <section id="speakersView" class="view">
-      <div class="page-head"><div><div class="eyebrow">ROZPOZNANÍ ŘEČNÍCI</div><h2>Kdo byl kdo?</h2></div></div>
-      <p class="helper">Aplikace rozdělila nahrávku podle hlasů. Doplň jména; propíšou se do úkolů i přepisu.</p>
-      <div id="speakerList" class="speaker-list"></div>
-      <div class="speaker-count-row"><button id="removeSpeakerBtn" class="mini">−</button><span id="speakerCountLabel">3 řečníci</span><button id="addSpeakerBtn" class="mini">+</button></div>
-      <button id="applySpeakersBtn" class="primary">Potvrdit jména a pokračovat</button>
-    </section>
-
-    <section id="doneView" class="view">
-      <div class="done-screen">
-        <div class="check-ring">✓</div>
-        <h2>Hotovo!</h2>
-        <p>Meeting Brief je připraven.</p>
-        <button id="showBriefBtn" class="primary">Zobrazit shrnutí</button>
-        <button id="quickMailBtn" class="secondary">Připravit follow-up e-mail</button>
-      </div>
-    </section>
-
-    <section id="briefView" class="view brief-view">
-      <div class="brief-top"><button id="briefBackBtn" class="link-btn">‹ Zpět</button><strong>Meeting Brief</strong><button id="shareBtn" class="icon-btn">↗</button></div>
-      <div class="tabs"><button class="tab active" data-tab="summary">SHRNUTÍ</button><button class="tab" data-tab="source">PŘEPIS (KONTROLA)</button></div>
-      <div id="summaryTab" class="tab-panel active">
-        <section class="brief-section main-conclusion"><h3>✓ Hlavní závěr</h3><p id="executiveSummary"></p></section>
-        <section class="brief-section"><h3>● Dohodnuto</h3><ul id="decisionsList"></ul></section>
-        <section class="brief-section"><h3>● Úkoly</h3><div id="tasksTable" class="tasks-table"></div></section>
-        <section class="brief-section"><h3>● Požadavky zákazníka</h3><ul id="requestsList"></ul></section>
-        <section class="brief-section"><h3>● Pozice HOPI</h3><ul id="hopiList"></ul></section>
-        <section class="brief-section"><h3>● Rizika</h3><ul id="risksList"></ul></section>
-        <section class="brief-section internal"><h3>! Interní AI pohled</h3><p id="recommendation"></p></section>
-        <section class="brief-section"><h3>✉ Follow-up</h3><ul id="followupList"></ul></section>
-      </div>
-      <div id="sourceTab" class="tab-panel"><div id="sourceTranscript" class="source-transcript"></div></div>
-      <div class="brief-actions"><button id="copyBtn" class="secondary">Kopírovat</button><button id="emailBtn" class="primary">Odeslat e-mail</button><button id="pdfBtn" class="secondary">Uložit PDF</button></div>
-    </section>
-
-    <section id="meetingsView" class="view">
-      <div class="page-head"><div><div class="eyebrow">HISTORIE</div><h2>Moje meetingy</h2></div><span id="historyCount" class="badge">0</span></div>
-      <div id="meetingHistory" class="history-list"></div>
-    </section>
-
-    <section id="settingsView" class="view">
-      <div class="page-head"><div><div class="eyebrow">NASTAVENÍ</div><h2>Meeting Assistant</h2></div></div>
-      <div class="settings-card"><h3>🔒 Zabezpečení</h3><p>Přístupové údaje nejsou uložené v telefonu. Nahrávka se používá pouze pro zpracování meetingu.</p></div>
-      <div class="settings-card"><h3>🎙 Zpracování meetingu</h3><p>Po ukončení se vytvoří přepis, rozliší řečníci a připraví strukturovaný Meeting Brief.</p></div>
-      <div class="settings-card"><h3>👥 Řečníci</h3><p>Aplikace rozliší jednotlivé hlasové skupiny. Konkrétní jména před finálním výstupem potvrzuješ ty.</p></div>
-      <button id="clearHistoryBtn" class="danger-line">Smazat historii meetingů</button>
-    </section>
-
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-view="homeView"><span>◉</span>Nahrávat</button>
-      <button class="nav-btn" data-view="meetingsView"><span>▣</span>Moje meetingy</button>
-      <button class="nav-btn" data-view="settingsView"><span>⚙</span>Nastavení</button>
-    </nav>
-  </main>
-
-  <div id="toast" class="toast"></div>
-  <script src="app.js"></script>
-  <script src="audio-quality.js"></script>
-  <script src="production.js"></script>
-  <script src="diarization-fix.js"></script>
-  <script src="api-mode.js"></script>
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-view="homeView"><span>◉</span>Nahrávat</button>
+    <button class="nav-btn" data-view="tasksView"><span>✓</span>Úkoly</button>
+    <button class="nav-btn" data-view="customersView"><span>▣</span>Zákazníci</button>
+    <button class="nav-btn" data-view="settingsView"><span>⚙</span>Nastavení</button>
+  </nav>
+</main>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+<script src="production.js"></script>
+<script src="api-mode.js"></script>
 </body>
 </html>
