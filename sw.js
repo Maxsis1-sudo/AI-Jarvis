@@ -1,6 +1,6 @@
-const CACHE='hopi-meeting-production-v5';
+const CACHE='hopi-meeting-production-v6';
 const ASSETS=[
-  './','./index.html','./styles.css','./app.js','./production.js','./api-mode.js',
+  './','./index.html','./styles.css','./app.js','./audio-quality.js','./production.js','./diarization-fix.js','./api-mode.js',
   './manifest.webmanifest','./icon.svg'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
