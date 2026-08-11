@@ -1,4 +1,4 @@
-const CACHE='hopi-meeting-api-v1';
+const CACHE='hopi-meeting-production-v1';
 const ASSETS=[
   './','./index.html','./styles.css','./app.js','./api-mode.js',
   './manifest.webmanifest','./icon.svg'
