@@ -1,5 +1,4 @@
 import express from 'express';
-import cors from 'cors';
 import multer from 'multer';
 import OpenAI from 'openai';
 import { File } from 'node:buffer';
@@ -8,33 +7,59 @@ import { fileURLToPath } from 'node:url';
 
 const app = express();
 const port = process.env.PORT || 8787;
-const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
 const summaryModel = process.env.SUMMARY_MODEL || 'gpt-5-mini';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, 'public');
+const githubPagesOrigin = 'https://maxsis1-sudo.github.io';
 
 let openaiClient = null;
 function getOpenAIClient() {
   const apiKey = String(process.env.OPENAI_API_KEY || '').trim();
-  if (!apiKey) {
-    throw new Error('Server is missing OPENAI_API_KEY. Add it in Render Environment settings.');
+  if (!apiKey) throw new Error('Zpracování není nakonfigurované.');
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey,
+      timeout: 240000,
+      maxRetries: 1
+    });
   }
-  if (!openaiClient) openaiClient = new OpenAI({ apiKey });
   return openaiClient;
 }
 
 if (!process.env.OPENAI_API_KEY) {
-  console.warn('OPENAI_API_KEY is not set yet. Server will still start; AI processing will remain disabled until the key is added.');
+  console.warn('OPENAI_API_KEY is not set yet. Server will start, but meeting processing is disabled.');
 }
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 150 * 1024 * 1024 }
+  limits: { fileSize: 60 * 1024 * 1024, files: 1 }
 });
 
 app.set('trust proxy', 1);
-app.use(cors({ origin: allowedOrigin === '*' ? true : allowedOrigin }));
+app.disable('x-powered-by');
+
+// Allow the app itself and the optional GitHub Pages build. This prevents
+// unrelated browser origins from casually consuming the processing endpoint.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin) return next();
+  try {
+    const parsed = new URL(origin);
+    const sameHost = parsed.host === req.headers.host;
+    const allowedGithub = origin === githubPagesOrigin;
+    if (!sameHost && !allowedGithub) return res.status(403).json({ error: 'Origin is not allowed.' });
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    return next();
+  } catch {
+    return res.status(403).json({ error: 'Invalid origin.' });
+  }
+});
+
 app.use(express.json({ limit: '1mb' }));
 
 const rateBuckets = new Map();
@@ -50,23 +75,33 @@ function meetingRateLimit(req, res, next) {
   }
   current.count += 1;
   if (current.count > rateLimitPerHour) {
-    return res.status(429).json({ error: 'Too many meeting-processing requests. Try again later.' });
+    return res.status(429).json({ error: 'Příliš mnoho zpracování za hodinu. Zkus to později.' });
   }
   next();
 }
 
 app.get('/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   res.json({
     ok: true,
-    service: 'HOPI Meeting Assistant API',
+    service: 'HOPI Meeting Assistant',
+    version: 'production-v1',
     aiConfigured: Boolean(String(process.env.OPENAI_API_KEY || '').trim()),
     summaryModel
   });
 });
 
-app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (req, res) => {
+app.post('/process-meeting', meetingRateLimit, (req, res, next) => {
+  upload.single('audio')(req, res, err => {
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'Nahrávka je příliš velká. Zkus kratší meeting.' });
+    }
+    if (err) return res.status(400).json({ error: 'Nahrávku se nepodařilo načíst.' });
+    next();
+  });
+}, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'Missing audio file.' });
+    if (!req.file) return res.status(400).json({ error: 'Chybí audio nahrávka.' });
 
     const client = getOpenAIClient();
     const filename = req.file.originalname || 'meeting.webm';
@@ -83,7 +118,7 @@ app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (re
 
     const rawSegments = Array.isArray(transcription.segments) ? transcription.segments : [];
     if (!rawSegments.length) {
-      return res.status(422).json({ error: 'The transcription did not contain diarized speaker segments.' });
+      return res.status(422).json({ error: 'Z nahrávky se nepodařilo získat přepis s řečníky.' });
     }
 
     const speakerOrder = [];
@@ -94,7 +129,7 @@ app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (re
 
     const speakerMap = Object.fromEntries(speakerOrder.map((label, index) => [label, `speaker_${index + 1}`]));
 
-    const segments = rawSegments.map((segment) => ({
+    const segments = rawSegments.map(segment => ({
       speakerId: speakerMap[String(segment.speaker || 'A')],
       start: Number(segment.start || 0),
       end: Number(segment.end || 0),
@@ -113,7 +148,7 @@ app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (re
       `[${segment.speakerId}] ${formatTime(segment.start)} ${segment.text}`
     ).join('\n');
 
-    const meetingName = String(req.body.meetingName || 'Meeting');
+    const meetingName = String(req.body.meetingName || 'Meeting').slice(0, 200);
     const summary = await summarizeMeeting({
       client,
       meetingName,
@@ -121,6 +156,7 @@ app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (re
       speakerIds: speakers.map(s => s.id)
     });
 
+    res.setHeader('Cache-Control', 'no-store');
     res.json({
       duration: Number(transcription.duration || 0),
       speakers,
@@ -129,7 +165,13 @@ app.post('/process-meeting', meetingRateLimit, upload.single('audio'), async (re
     });
   } catch (error) {
     console.error('Meeting processing failed:', error);
-    res.status(500).json({ error: error?.message || 'Meeting processing failed.' });
+    const status = error?.status === 429 ? 429 : error?.status === 401 ? 503 : 500;
+    const message = status === 429
+      ? 'Byl dosažen dočasný limit zpracování. Zkus to za chvíli znovu.'
+      : status === 503
+        ? 'Zpracování není momentálně dostupné.'
+        : 'Meeting se nepodařilo zpracovat. Zkus požadavek zopakovat.';
+    res.status(status).json({ error: message });
   }
 });
 
