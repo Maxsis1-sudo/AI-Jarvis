@@ -39,8 +39,6 @@ const upload = multer({
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// Allow the app itself and the optional GitHub Pages build. This prevents
-// unrelated browser origins from casually consuming the processing endpoint.
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (!origin) return next();
@@ -85,7 +83,7 @@ app.get('/health', (_req, res) => {
   res.json({
     ok: true,
     service: 'HOPI Meeting Assistant',
-    version: 'production-v1',
+    version: 'production-v2-concise-brief',
     aiConfigured: Boolean(String(process.env.OPENAI_API_KEY || '').trim()),
     summaryModel
   });
@@ -177,39 +175,117 @@ app.post('/process-meeting', meetingRateLimit, (req, res, next) => {
 
 async function summarizeMeeting({ client, meetingName, transcriptForSummary, speakerIds }) {
   const instructions = `
-Jsi KAM meeting assistant pro logistickou společnost HOPI.
-Z přepisu vytvoř pouze stručný manažerský výstup v češtině. Neopisuj schůzku slovo od slova.
-Rozlišuj fakta od interpretace a nic nevymýšlej. Pokud termín, částka nebo vlastník úkolu nebyly řečeny, nepředstírej je.
+Jsi seniorní KAM meeting assistant pro logistickou společnost HOPI.
+Tvým úkolem je UDĚLAT Z PŘEPISU STRUČNÝ MANAŽERSKÝ BRIEF, nikoliv přepis zopakovat.
 
-Důležité:
-- Zachovej reference na řečníky přesně jako ${speakerIds.join(', ')}.
-- U úkolu dej owner jako speakerId jen tehdy, pokud je z přepisu jasné, kdo úkol převzal. Jinak owner nech prázdný řetězec.
-- Interní recommendation může být obchodní doporučení pro KAM HOPI a nebude odesíláno zákazníkovi.
-- customerRequests = co chce zákazník.
-- hopiPosition = co HOPI potvrdilo, odmítlo nebo podmínilo.
-- numbers = pouze důležitá čísla, ceny, procenta, objemy, LKW, palety, termíny nebo SLA, která skutečně zazněla.
+NEJDŮLEŽITĚJŠÍ PRAVIDLO:
+- Nikdy nekopíruj celé věty nebo dlouhé pasáže z přepisu.
+- Každý bod přeformuluj do krátkého významového shrnutí.
+- Odstraň výplňová slova, opakování, váhání, zdvořilostní fráze a konverzační omáčku.
+- Zachovej pouze fakta, rozhodnutí, požadavky, čísla, rizika a konkrétní další kroky.
+- Pokud jedna dlouhá replika obsahuje více myšlenek, rozděl je na několik krátkých bodů.
+- Pokud se stejná věc opakuje, uveď ji jen jednou.
+- Nic nevymýšlej. Pokud něco nebylo řečeno, nepřidávej to.
 
-Vrať POUZE validní JSON bez markdownu v tomto tvaru:
+PŘÍKLAD transformace:
+Přepis: "Chtěl jsem se zeptat, jestli souhlasíte s cenou 15 000 za Cerhovice a 16 000 za Buštěhrad, nebo jestli máte jinou cenu od konkurence."
+Správný bod: "Navržená cena: Cerhovice 15 000 Kč, Buštěhrad 16 000 Kč."
+Další správný bod: "Ověřit konkurenceschopnost navržených sazeb."
+Špatně: zopakovat celou původní větu.
+
+Přesná pravidla délky:
+- executive: maximálně 2 krátké věty, dohromady do 220 znaků.
+- decisions: max 5 bodů, každý ideálně 4–12 slov, max 120 znaků.
+- tasks: max 6 úkolů; task jako krátká akce, max 100 znaků.
+- customerRequests, hopiPosition, risks, numbers, followUp: max 5 bodů v každé sekci, každý max 120 znaků.
+- recommendation: maximálně 2 krátké věty, max 220 znaků.
+
+Obsah sekcí:
+- executive = o čem meeting byl a kam se posunul; ne seznam všeho.
+- decisions = skutečně dohodnuté závěry, ne otázky a ne návrhy bez potvrzení.
+- tasks = konkrétní další akce; owner jako speakerId pouze pokud je jasné, kdo úkol převzal.
+- customerRequests = co zákazník skutečně chce nebo požaduje.
+- hopiPosition = co HOPI potvrdilo, navrhlo, odmítlo nebo podmínilo.
+- risks = otevřené problémy, nejasnosti, obchodní či provozní rizika.
+- numbers = důležité ceny, procenta, objemy, palety, LKW, termíny, SLA.
+- followUp = co je potřeba potvrdit nebo dořešit po meetingu.
+- recommendation = pouze interní doporučení pro KAM HOPI; zákazník ho neuvidí.
+
+Zachovej reference na řečníky přesně jako ${speakerIds.join(', ')}.
+U task.owner použij speakerId jen pokud je z přepisu jasný vlastník. Jinak použij prázdný řetězec.
+
+Vrať POUZE validní JSON bez markdownu:
 {
-  "executive": "2-4 věty s hlavním závěrem",
-  "decisions": ["..."],
-  "tasks": [{"task":"...","owner":"speaker_1","deadline":"..."}],
-  "customerRequests": ["..."],
-  "hopiPosition": ["..."],
-  "risks": ["..."],
-  "numbers": ["..."],
-  "followUp": ["..."],
-  "recommendation": "stručné interní doporučení pro KAM"
+  "executive": "stručný manažerský závěr",
+  "decisions": ["krátký bod"],
+  "tasks": [{"task":"krátká akce","owner":"speaker_1","deadline":"termín nebo prázdné"}],
+  "customerRequests": ["krátký bod"],
+  "hopiPosition": ["krátký bod"],
+  "risks": ["krátký bod"],
+  "numbers": ["krátký bod"],
+  "followUp": ["krátký bod"],
+  "recommendation": "stručné interní doporučení"
 }`;
 
   const response = await client.responses.create({
     model: summaryModel,
     store: false,
     instructions,
-    input: `Meeting: ${meetingName}\n\nPŘEPIS PODLE ŘEČNÍKŮ:\n${transcriptForSummary}`
+    input: `Meeting: ${meetingName}\n\nPŘEPIS PODLE ŘEČNÍKŮ:\n${transcriptForSummary}\n\nZnovu: NEOPISUJ přepis. Vytáhni význam a přepiš ho do stručných manažerských bodů.`
   });
 
-  return parseJsonObject(response.output_text || '');
+  return normalizeSummary(parseJsonObject(response.output_text || ''));
+}
+
+function normalizeSummary(summary) {
+  const list = (value, maxItems = 5, maxChars = 120) => {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set();
+    const out = [];
+    for (const item of value) {
+      const compact = compactText(item, maxChars);
+      if (!compact) continue;
+      const key = compact.toLocaleLowerCase('cs-CZ');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(compact);
+      if (out.length >= maxItems) break;
+    }
+    return out;
+  };
+
+  const tasks = Array.isArray(summary?.tasks)
+    ? summary.tasks.slice(0, 6).map(task => ({
+        task: compactText(task?.task, 100),
+        owner: String(task?.owner || '').trim(),
+        deadline: compactText(task?.deadline, 40)
+      })).filter(task => task.task)
+    : [];
+
+  return {
+    executive: compactText(summary?.executive, 220),
+    decisions: list(summary?.decisions),
+    tasks,
+    customerRequests: list(summary?.customerRequests),
+    hopiPosition: list(summary?.hopiPosition),
+    risks: list(summary?.risks),
+    numbers: list(summary?.numbers),
+    followUp: list(summary?.followUp),
+    recommendation: compactText(summary?.recommendation, 220)
+  };
+}
+
+function compactText(value, maxChars) {
+  let text = String(value || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[•\-–—\s]+/, '')
+    .trim();
+  if (!text) return '';
+  if (text.length <= maxChars) return text;
+  const sliced = text.slice(0, maxChars + 1);
+  const lastSpace = sliced.lastIndexOf(' ');
+  text = sliced.slice(0, lastSpace > maxChars * 0.65 ? lastSpace : maxChars).trim();
+  return `${text.replace(/[,:;\-–—]+$/, '')}…`;
 }
 
 function parseJsonObject(text) {
