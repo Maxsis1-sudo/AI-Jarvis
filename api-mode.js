@@ -14,7 +14,7 @@
     const chip = document.querySelector('.status-chip');
     if (mode) mode.textContent = text;
     if (chip) {
-      chip.textContent = tone === 'green' ? '✦ AI API připraveno' : text;
+      chip.textContent = tone === 'green' ? '✓ Připraveno' : text;
       chip.dataset.tone = tone;
     }
   }
@@ -35,7 +35,7 @@
     box.textContent = text;
   }
 
-  function injectApiSettings() {
+  function injectConnectionSettings() {
     const settings = byId('settingsView');
     if (!settings || byId('apiSettingsCard')) return;
     const card = document.createElement('div');
@@ -43,47 +43,49 @@
     card.className = 'settings-card';
     const configuredBase = apiBase();
     card.innerHTML = `
-      <h3>☁ AI server</h3>
-      <p id="apiHealthText">Kontroluji připojení…</p>
-      ${sameOriginApi() ? '<p style="font-size:11px;color:#758079">Aplikace a API běží pod stejnou Render adresou. Není potřeba nic nastavovat.</p>' : `
-        <label class="field"><span>Render API URL</span><input id="apiBaseInput" value="${configuredBase}" placeholder="https://...onrender.com"></label>
-        <p style="font-size:11px;color:#758079">Na GitHub Pages vlož Render adresu služby. Na Render verzi se používá stejná adresa automaticky.</p>`}
-      <button id="apiTestBtn" class="primary">Otestovat API</button>`;
+      <h3>↔ Připojení ke zpracování</h3>
+      <p id="apiHealthText">Kontroluji připravenost…</p>
+      ${sameOriginApi() ? '<p style="font-size:11px;color:#758079">Aplikace je připojená automaticky. Není potřeba nic nastavovat.</p>' : `
+        <label class="field"><span>Adresa zpracování</span><input id="apiBaseInput" value="${configuredBase}" placeholder="https://...onrender.com"></label>
+        <p style="font-size:11px;color:#758079">Toto nastavení je potřeba jen při používání verze z GitHub Pages.</p>`}
+      <button id="apiTestBtn" class="primary">Otestovat spojení</button>`;
     settings.insertBefore(card, byId('clearHistoryBtn'));
     byId('apiBaseInput')?.addEventListener('change', e => {
       localStorage.setItem(API_URL_KEY, normalizeBase(e.target.value));
     });
-    byId('apiTestBtn').onclick = checkHealth;
+    byId('apiTestBtn').onclick = () => checkHealth(true);
   }
 
-  async function checkHealth() {
+  async function checkHealth(showToast = false) {
     const text = byId('apiHealthText');
     const base = apiBase();
     if (!sameOriginApi() && !base) {
-      if (text) text.textContent = 'Na GitHub Pages zatím není zadaná Render API URL.';
-      setMode('API adresa není nastavená', 'amber');
+      if (text) text.textContent = 'Není nastavená adresa zpracování.';
+      setMode('Dokonči nastavení', 'amber');
       return false;
     }
     try {
-      if (text) text.textContent = 'Probouzím a kontroluji AI server…';
+      if (text) text.textContent = 'Kontroluji připravenost…';
       const response = await fetch(endpoint('/health'), { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       api.available = !!data.ok;
       api.configured = !!data.aiConfigured;
       if (api.available && api.configured) {
-        if (text) text.textContent = `✓ API je připravené · shrnutí: ${data.summaryModel || 'GPT'}`;
-        setMode('OpenAI API · přepis + řečníci + Meeting Brief');
+        if (text) text.textContent = '✓ Zpracování je připravené.';
+        setMode('Připraveno');
+        if (showToast && typeof toast === 'function') toast('Spojení je v pořádku.');
         return true;
       }
-      if (text) text.textContent = 'Server běží, ale OPENAI_API_KEY není načtený.';
-      setMode('API klíč není aktivní', 'amber');
+      if (text) text.textContent = 'Služba běží, ale zpracování ještě není nakonfigurované.';
+      setMode('Zpracování není připravené', 'amber');
       return false;
     } catch (err) {
-      console.warn('API health failed:', err);
+      console.warn('Processing health failed:', err);
       api.available = false;
-      if (text) text.textContent = 'API server zatím není dostupný. U bezplatného Renderu může první probuzení chvíli trvat.';
-      setMode('AI server se probouzí…', 'amber');
+      if (text) text.textContent = 'Služba se probouzí nebo je dočasně nedostupná.';
+      setMode('Připravuji zpracování…', 'amber');
+      if (showToast && typeof toast === 'function') toast('Spojení zatím není dostupné. Zkus test za chvíli znovu.');
       return false;
     }
   }
@@ -157,7 +159,7 @@
       if (metas.length > 1) metas[metas.length - 1].textContent = `${Math.round(Number(s.seconds || 0))} s`;
     });
     const helper = document.querySelector('#speakersView .helper');
-    if (helper) helper.textContent = `AI rozlišila ${speakers.length || state.speakerCount} hlasových skupin podle nahrávky. Doplň jména; ta se propíšou do úkolů i přepisu.`;
+    if (helper) helper.textContent = `Rozpoznáno ${speakers.length || state.speakerCount} řečníků. Doplň jména; propíšou se do úkolů i přepisu.`;
   }
 
   function mapNamedOwners() {
@@ -205,20 +207,20 @@
       note.id = 'apiBriefBadge';
       note.className = 'info-box';
       note.style.marginBottom = '10px';
-      note.textContent = '✦ Přepis, rozlišení řečníků a Meeting Brief zpracovala serverová AI.';
+      note.textContent = '✓ Meeting byl zpracován a připraven ke kontrole.';
       summary.prepend(note);
     }
   }
 
   async function processMeetingWithApi() {
     const base = apiBase();
-    if (!sameOriginApi() && !base) throw new Error('Není nastavená Render API URL.');
+    if (!sameOriginApi() && !base) throw new Error('Není nastavená adresa zpracování.');
     showView('processView');
     setProcess('working', 'Ukončuji nahrávku…');
     const audio = await finishRecorder();
     if (!audio.size) throw new Error('Audio záznam je prázdný.');
 
-    setProcess('working', 'Odesílám zabezpečeně audio na AI server…');
+    setProcess('working', 'Nahrávám meeting ke zpracování…');
     const form = new FormData();
     form.append('audio', audio, `meeting.${mimeExtension(audio.type)}`);
     form.append('meetingName', byId('meetingName')?.value || 'Meeting');
@@ -227,32 +229,35 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      setProcess('working', 'AI přepisuje řeč a rozlišuje řečníky…');
+      setProcess('working', 'Přepisuji řeč a rozpoznávám řečníky…');
       const response = await fetch(endpoint('/process-meeting'), {
         method: 'POST',
         body: form,
         signal: controller.signal
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || `API chyba ${response.status}`);
+      if (!response.ok) throw new Error(payload.error || `Chyba zpracování ${response.status}`);
       hydrateFromApi(payload);
       setProcess('done', 'Přepis, řečníci a Meeting Brief jsou hotové');
       renderSpeakers();
       enhanceSpeakerCards();
       showView('speakersView');
+    } catch (err) {
+      if (err?.name === 'AbortError') throw new Error('Zpracování překročilo časový limit. Zkus kratší nahrávku nebo požadavek zopakuj.');
+      throw err;
     } finally {
       clearTimeout(timer);
     }
   }
 
   function fallbackAfterError(err) {
-    console.error('API processing failed:', err);
+    console.error('Meeting processing failed:', err);
     try {
       if (!state.analysis) state.analysis = buildLocalAnalysis(state.transcript || '');
       state.speakerCount = Math.max(1, state.speakerCount || 1);
       renderSpeakers();
       showView('speakersView');
-      if (typeof toast === 'function') toast(`API se nepodařilo použít: ${err.message || err}. Použit lokální fallback.`);
+      if (typeof toast === 'function') toast(`Zpracování se nepodařilo: ${err.message || err}. Použit náhradní výstup z kontrolního přepisu.`);
     } catch (fallbackErr) {
       console.error(fallbackErr);
       showView('homeView');
@@ -268,8 +273,10 @@
     if (!stop) return;
 
     stop.onclick = async () => {
+      stop.disabled = true;
       try { await processMeetingWithApi(); }
       catch (err) { fallbackAfterError(err); }
+      finally { stop.disabled = false; }
     };
 
     if (apply) {
@@ -299,8 +306,9 @@
     }
   }
 
-  injectApiSettings();
+  injectConnectionSettings();
   patchFlow();
   checkHealth();
-  window.HOPI_API_MODE = { checkHealth, status: () => ({ ...api, base: apiBase() }) };
+  setTimeout(() => { if (!api.available) checkHealth(); }, 5000);
+  window.HOPI_PROCESSING = { checkHealth, status: () => ({ ...api, base: apiBase() }) };
 })();
