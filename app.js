@@ -1,201 +1,48 @@
 const $ = id => document.getElementById(id);
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const STORAGE_KEY = 'hopi-meeting-history-v1';
+const STORAGE_KEY = 'hopi-kam-meetings-v2';
+const DONE_KEY = 'hopi-kam-promises-done-v1';
 
-const state = {
-  recognition:null, recorder:null, stream:null, chunks:[], audioUrl:null,
-  startedAt:0, timerId:null, transcript:'', interim:'', turns:[], recording:false,
-  analysis:null, speakerCount:3, names:{}, currentId:null, demo:false
-};
+const state = { recorder:null, stream:null, recognition:null, chunks:[], startedAt:0, timerId:null, recording:false, transcript:'', interim:'', analysis:null, currentId:null, markers:[], audioBlob:null };
 
-function showView(id){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  $(id)?.classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===id));
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),3200)}
-function wc(text){return (String(text||'').trim().match(/\S+/g)||[]).length}
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id)?.classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));window.scrollTo({top:0,behavior:'smooth'});if(id==='tasksView')renderPromises();if(id==='customersView')renderCustomers()}
+function toast(msg){const t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),3200)}
 function esc(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]))}
-function fmtTime(sec){sec=Math.max(0,Math.floor(sec||0));const m=String(Math.floor(sec/60)).padStart(2,'0');const s=String(sec%60).padStart(2,'0');return `${m}:${s}`}
+function wc(t){return (String(t||'').trim().match(/\S+/g)||[]).length}
+function fmtTime(sec){sec=Math.max(0,Math.floor(sec||0));return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`}
 function dateLabel(ts=Date.now()){return new Intl.DateTimeFormat('cs-CZ',{dateStyle:'medium',timeStyle:'short'}).format(new Date(ts))}
 function elapsed(){return state.startedAt?(Date.now()-state.startedAt)/1000:0}
 
-function resetMeeting(){
-  try{if(state.audioUrl)URL.revokeObjectURL(state.audioUrl)}catch{}
-  try{state.recognition?.abort()}catch{}
-  try{state.stream?.getTracks().forEach(t=>t.stop())}catch{}
-  state.recognition=null;state.recorder=null;state.stream=null;
-  state.chunks=[];state.audioUrl=null;state.transcript='';state.interim='';state.turns=[];state.analysis=null;state.names={};state.speakerCount=3;state.currentId=null;state.demo=false;state.recording=false;
-  $('liveTranscript').textContent='Čekám na první slova…';$('wordCount').textContent='0 slov';$('timer').textContent='00:00';
-}
+function resetMeeting(){try{state.recognition?.abort()}catch{};try{state.stream?.getTracks().forEach(t=>t.stop())}catch{};state.recorder=null;state.stream=null;state.recognition=null;state.chunks=[];state.startedAt=0;clearInterval(state.timerId);state.timerId=null;state.recording=false;state.transcript='';state.interim='';state.analysis=null;state.currentId=null;state.markers=[];state.audioBlob=null;if($('timer'))$('timer').textContent='00:00';if($('liveTranscript'))$('liveTranscript').textContent='Čekám na první slova…';if($('wordCount'))$('wordCount').textContent='0 slov';updateMarkerCount()}
 
-async function startMeeting(){
-  resetMeeting();
-  const name=$('meetingName').value.trim()||'Meeting';
-  $('recordTitle').textContent=name;
-  try{
-    if(!navigator.mediaDevices?.getUserMedia) throw new Error('Mikrofon není v tomto prohlížeči dostupný.');
-    state.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
-    if(!window.MediaRecorder) throw new Error('Nahrávání audia není v tomto prohlížeči podporované.');
-
-    const types=['audio/mp4','audio/webm;codecs=opus','audio/webm'];
-    const mime=types.find(t=>MediaRecorder.isTypeSupported?.(t));
-    const options={audioBitsPerSecond:32000};
-    if(mime) options.mimeType=mime;
-    try{state.recorder=new MediaRecorder(state.stream,options)}catch{state.recorder=mime?new MediaRecorder(state.stream,{mimeType:mime}):new MediaRecorder(state.stream)}
-    state.recorder.ondataavailable=e=>{if(e.data?.size)state.chunks.push(e.data)};
-    state.recorder.onerror=()=>toast('Nahrávání bylo přerušeno. Zkus meeting spustit znovu.');
-    state.recorder.start(1000);
-
-    state.recording=true;state.startedAt=Date.now();state.timerId=setInterval(()=>$('timer').textContent=fmtTime(elapsed()),500);
-    if(SpeechRecognition) startRecognition();
-    else $('liveTranscript').textContent='Živý kontrolní přepis není dostupný. Finální přepis vytvoří AI po ukončení meetingu.';
-    showView('recordView');
-  }catch(e){
-    try{state.stream?.getTracks().forEach(t=>t.stop())}catch{}
-    toast(e.message||'Nepodařilo se spustit mikrofon.');
-  }
-}
-
-function startRecognition(){
-  const r=new SpeechRecognition();
-  r.lang='cs-CZ';r.continuous=true;r.interimResults=true;r.maxAlternatives=1;
-  r.onresult=e=>{
-    let interim='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const text=e.results[i][0].transcript.trim();
-      if(e.results[i].isFinal&&text){
-        const clean=text+( /[.!?]$/.test(text)?'':'.');
-        state.transcript+=(state.transcript?' ':'')+clean;
-        state.turns.push({text:clean,time:elapsed()});
-      }else if(text) interim+=(interim?' ':'')+text;
-    }
-    state.interim=interim;
-    const all=[state.transcript,interim].filter(Boolean).join(' ');
-    $('liveTranscript').textContent=all||'Čekám na první slova…';$('wordCount').textContent=`${wc(all)} slov`;
-  };
-  r.onerror=e=>{if(!['no-speech','aborted'].includes(e.error))console.warn('Live transcript:',e.error)};
-  r.onend=()=>{if(state.recording){try{r.start()}catch{}}};
-  try{r.start();state.recognition=r}catch{}
-}
-
-async function stopMeeting(){
-  state.recording=false;clearInterval(state.timerId);try{state.recognition?.stop()}catch{}
-  if(state.recorder&&state.recorder.state!=='inactive') await new Promise(resolve=>{state.recorder.addEventListener('stop',resolve,{once:true});state.recorder.stop()});
-  state.stream?.getTracks().forEach(t=>t.stop());
-  showView('processView');
-  $('processSummaryStep').innerHTML='◌ <span>Analýza a shrnutí</span>';
-  setTimeout(()=>{
-    state.analysis=buildLocalAnalysis(state.transcript);
-    $('processSummaryStep').innerHTML='✓ <span>Analýza a shrnutí</span>';$('processSummaryStep').classList.add('done');
-    setTimeout(()=>{renderSpeakers();showView('speakersView')},500);
-  },900);
-}
-
-function splitSentences(text){const x=String(text||'').replace(/\s+/g,' ').trim();return x?x.split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(s=>s.length>7):[]}
-function uniq(items){const seen=new Set();return items.filter(x=>{const k=x.toLowerCase();if(seen.has(k))return false;seen.add(k);return true})}
-function pick(all,re,limit=5){return uniq(all.filter(s=>re.test(s))).slice(0,limit)}
-function buildLocalAnalysis(text){
-  const all=splitSentences(text);
-  const decisions=pick(all,/(dohod|domluv|rozhod|potvrd|schvál|souhlas|platí|bude\s|budeme\s)/i,5);
-  const tasksRaw=pick(all,/(pošl|zašl|připrav|prověř|ověř|spočít|dopočít|dodá|zajistí|zjist|dopln|uděl|termín|deadline|do\s+\d)/i,6);
-  const requests=pick(all,/(potřebujem|chceme|požad|očekáv|prosím|chtěl|zákazník|transparent|garanc|flexibil)/i,5);
-  const hopi=pick(all,/(hopi|za nás|můžeme|nemůžeme|nabídn|naše stanovisko|z naší strany)/i,5);
-  const risks=pick(all,/(rizik|problém|pokles|ztrát|zpožd|sankc|nedostatek|nevychází|nestíh|otevřen|nevíme|není potvrzen)/i,5);
-  const follow=pick(all,/(příšt|další meeting|naváž|follow|ozv|pošl|potvrd|dořeš)/i,5);
-  const important=uniq([...decisions,...tasksRaw,...requests,...all.filter(s=>s.length>55)]).slice(0,4);
-  const executive=important.length?important.slice(0,2).join(' '):'Meeting byl zaznamenán. Kontrolní přepis neobsahuje dostatek jednoznačných bodů pro přesné náhradní shrnutí.';
-  const tasks=tasksRaw.map(t=>({task:t,owner:'',deadline:(t.match(/\b\d{1,2}[.\/]\s*\d{1,2}(?:[.\/]\s*\d{2,4})?/ )||[])[0]||''}));
-  const recommendation=risks.length?'Před dalším krokem doporučuji potvrdit otevřené body a rizika a až poté uzavírat finální závazky.':'Doporučuji potvrdit vlastníky úkolů a termíny a poslat stručný follow-up všem účastníkům.';
-  return {executive,decisions:decisions.length?decisions:['Bez jednoznačně zachyceného rozhodnutí.'],tasks,requests,hopi,risks,followup:follow.length?follow:['Potvrdit úkoly a termíny po meetingu.'],recommendation,source:all};
-}
-
-function renderSpeakers(){
-  const samples=state.turns.length?state.turns:state.analysis?.source?.map((text,i)=>({text,time:i*15}))||[];
-  const list=$('speakerList');list.innerHTML='';
-  for(let i=0;i<state.speakerCount;i++){
-    const sample=samples.find(x=>x.speakerIndex===i)?.text||samples[i]?.text||'Ukázka řečníka není dostupná.';
-    const card=document.createElement('div');card.className='speaker-card';
-    card.innerHTML=`<div class="speaker-row"><div class="speaker-avatar">${i+1}</div><div><div class="speaker-meta">Řečník ${i+1}</div><input class="speaker-name" data-index="${i}" value="${esc(state.names[i]||'')}" placeholder="Jméno, např. Roman"></div><div class="speaker-meta">${fmtTime(samples.find(x=>x.speakerIndex===i)?.time||samples[i]?.time||0)}</div></div><p class="speaker-sample">„${esc(sample)}“</p>`;
-    list.appendChild(card);
-  }
-  $('speakerCountLabel').textContent=`${state.speakerCount} ${state.speakerCount===1?'řečník':state.speakerCount<5?'řečníci':'řečníků'}`;
-}
-function collectNames(){document.querySelectorAll('.speaker-name').forEach(inp=>state.names[Number(inp.dataset.index)]=inp.value.trim()||`Řečník ${Number(inp.dataset.index)+1}`)}
-function applySpeakers(){collectNames();showView('doneView')}
-
-function renderBrief(){
-  const a=state.analysis; if(!a)return;
-  $('executiveSummary').textContent=a.executive;
-  fillList('decisionsList',a.decisions);fillList('requestsList',a.requests);fillList('hopiList',a.hopi);fillList('risksList',a.risks);fillList('followupList',a.followup);
-  $('recommendation').textContent=a.recommendation;
-  const tt=$('tasksTable');tt.innerHTML='';
-  if(!a.tasks.length)tt.innerHTML='<div class="task-row"><div>Bez konkrétního úkolu</div><div class="task-owner">—</div><div class="task-deadline">—</div></div>';
-  a.tasks.forEach(t=>{const row=document.createElement('div');row.className='task-row';const owner=t.owner||'Doplnit';row.innerHTML=`<div>${esc(t.task)}</div><div class="task-owner">${esc(owner)}</div><div class="task-deadline">${esc(t.deadline||'doplnit')}</div>`;tt.appendChild(row)});
-  const src=$('sourceTranscript');src.innerHTML='';
-  if(state.turns.length){state.turns.forEach((t,i)=>{const d=document.createElement('div');d.className='source-block';const idx=Number.isInteger(t.speakerIndex)?t.speakerIndex:i%state.speakerCount;d.innerHTML=`<b>${esc(t.speakerName||state.names[idx]||`Řečník ${idx+1}`)} · ${fmtTime(t.time)}</b><p>${esc(t.text)}</p>`;src.appendChild(d)})}
-  else (a.source||[]).forEach((t,i)=>{const d=document.createElement('div');d.className='source-block';d.innerHTML=`<b>Blok ${i+1}</b><p>${esc(t)}</p>`;src.appendChild(d)});
-  saveCurrentMeeting();
-  showView('briefView');
-}
-function fillList(id,items){const el=$(id);el.innerHTML='';(items?.length?items:['Bez zachycených bodů.']).forEach(x=>{const li=document.createElement('li');li.textContent=x;el.appendChild(li)})}
-
-function plainSummary(){
-  const a=state.analysis,name=$('meetingName').value.trim()||'Meeting';
-  const out=[`${name} – Meeting Brief`,dateLabel(),'','HLAVNÍ ZÁVĚR',a.executive,''];
-  const add=(title,arr)=>{if(arr?.length){out.push(title,...arr.map(x=>'• '+x),'')}};
-  add('DOHODNUTO',a.decisions);
-  if(a.tasks.length){out.push('ÚKOLY');a.tasks.forEach(t=>out.push(`• ${t.task} — ${t.owner||'Doplnit'} — ${t.deadline||'doplnit'}`));out.push('')}
-  add('POŽADAVKY ZÁKAZNÍKA',a.requests);add('POZICE HOPI',a.hopi);add('RIZIKA',a.risks);if(a.numbers?.length)add('DŮLEŽITÁ ČÍSLA',a.numbers);add('FOLLOW-UP',a.followup);
-  return out.join('\n');
-}
-function customerEmail(){
-  const a=state.analysis,name=$('meetingName').value.trim()||'Meeting';
-  const out=['Dobrý den,','',`děkuji za dnešní jednání k tématu ${name}. Níže zasílám stručné shrnutí dohodnutých bodů:`,''];
-  if(a.decisions.length){out.push('Dohodnuto:');a.decisions.forEach(x=>out.push('• '+x));out.push('')}
-  if(a.tasks.length){out.push('Další kroky:');a.tasks.forEach(t=>out.push(`• ${t.task}${t.owner?' – '+t.owner:''}${t.deadline?' – '+t.deadline:''}`));out.push('')}
-  if(a.followup.length){out.push('Navazující témata:');a.followup.forEach(x=>out.push('• '+x));out.push('')}
-  out.push('Děkuji a přeji hezký den.','','S pozdravem');return out.join('\n');
-}
-function openMail(){if(!state.analysis){toast('Nejdřív vytvoř shrnutí.');return}const to=$('emailTo').value.trim(),subject=`Shrnutí jednání – ${$('meetingName').value.trim()||'Meeting'}`;location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(customerEmail())}`}
-async function copySummary(){try{await navigator.clipboard.writeText(plainSummary());toast('Shrnutí zkopírováno.')}catch{toast('Kopírování se nepodařilo.')}}
-async function shareSummary(){if(navigator.share){try{await navigator.share({title:$('meetingName').value.trim()||'Meeting Brief',text:plainSummary()})}catch{}}else copySummary()}
+async function startMeeting(){resetMeeting();const customer=$('customerName')?.value.trim()||'';$('recordTitle').textContent=customer||'Meeting';try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('Mikrofon není dostupný.');state.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});if(!window.MediaRecorder)throw new Error('Nahrávání audia není podporované.');const types=['audio/mp4','audio/webm;codecs=opus','audio/webm'];const mime=types.find(t=>MediaRecorder.isTypeSupported?.(t));const opts={audioBitsPerSecond:64000};if(mime)opts.mimeType=mime;try{state.recorder=new MediaRecorder(state.stream,opts)}catch{state.recorder=mime?new MediaRecorder(state.stream,{mimeType:mime}):new MediaRecorder(state.stream)}state.recorder.ondataavailable=e=>{if(e.data?.size)state.chunks.push(e.data)};state.recorder.start(1000);state.recording=true;state.startedAt=Date.now();state.timerId=setInterval(()=>{$('timer').textContent=fmtTime(elapsed())},500);if(SpeechRecognition)startRecognition();else $('liveTranscript').textContent='Živý přepis není dostupný. Finální přepis vznikne po ukončení meetingu.';showView('recordView')}catch(e){try{state.stream?.getTracks().forEach(t=>t.stop())}catch{};toast(e.message||'Nepodařilo se spustit mikrofon.')}}
+function startRecognition(){const r=new SpeechRecognition();r.lang='cs-CZ';r.continuous=true;r.interimResults=true;r.maxAlternatives=1;r.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const text=e.results[i][0].transcript.trim();if(e.results[i].isFinal&&text)state.transcript+=(state.transcript?' ':'')+text;else if(text)interim+=(interim?' ':'')+text}state.interim=interim;const all=[state.transcript,interim].filter(Boolean).join(' ');$('liveTranscript').textContent=all||'Čekám na první slova…';$('wordCount').textContent=`${wc(all)} slov`};r.onerror=e=>{if(!['no-speech','aborted'].includes(e.error))console.warn(e.error)};r.onend=()=>{if(state.recording){try{r.start()}catch{}}};try{r.start();state.recognition=r}catch{}}
+async function finishRecording(){state.recording=false;clearInterval(state.timerId);try{state.recognition?.stop()}catch{};const mime=state.recorder?.mimeType||state.chunks?.[0]?.type||'audio/webm';if(state.recorder&&state.recorder.state!=='inactive')await new Promise(resolve=>{state.recorder.addEventListener('stop',resolve,{once:true});state.recorder.stop()});state.stream?.getTracks().forEach(t=>t.stop());state.audioBlob=new Blob(state.chunks,{type:mime});return state.audioBlob}
+function addImportantMarker(){if(!state.recording)return;state.markers.push(Math.round(elapsed()));updateMarkerCount();toast(`Označeno ${fmtTime(state.markers[state.markers.length-1])}`)}
+function updateMarkerCount(){if($('markerCount'))$('markerCount').textContent=`${state.markers.length} označených momentů`}
 
 function history(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}}
-function saveCurrentMeeting(){
-  const h=history(),id=state.currentId||String(Date.now());state.currentId=id;
-  const item={id,name:$('meetingName').value.trim()||'Meeting',email:$('emailTo').value.trim(),date:Date.now(),analysis:state.analysis,names:state.names,speakerCount:state.speakerCount,turns:state.turns};
-  const idx=h.findIndex(x=>x.id===id);if(idx>=0)h[idx]=item;else h.unshift(item);localStorage.setItem(STORAGE_KEY,JSON.stringify(h.slice(0,30)));renderHistory();
-}
-function renderHistory(){
-  const h=history();$('historyCount').textContent=String(h.length);const box=$('meetingHistory');box.innerHTML='';
-  if(!h.length){box.innerHTML='<div class="empty">Zatím tu nejsou žádné uložené meetingy.</div>';return}
-  h.forEach(item=>{const c=document.createElement('div');c.className='history-card';c.innerHTML=`<div class="history-card-top"><h3>${esc(item.name)}</h3><small>${esc(dateLabel(item.date))}</small></div><p>${esc(item.analysis?.executive||'Meeting Brief')}</p>`;c.onclick=()=>loadHistoryItem(item);box.appendChild(c)})
-}
-function loadHistoryItem(item){resetMeeting();state.currentId=item.id;state.analysis=item.analysis;state.names=item.names||{};state.speakerCount=item.speakerCount||3;state.turns=item.turns||[];$('meetingName').value=item.name||'Meeting';$('emailTo').value=item.email||'';renderBrief()}
+function saveHistory(items){localStorage.setItem(STORAGE_KEY,JSON.stringify(items.slice(0,100)))}
+function latestForCustomer(customer){const key=String(customer||'').trim().toLocaleLowerCase('cs-CZ');if(!key)return null;return history().find(x=>String(x.customer||'').trim().toLocaleLowerCase('cs-CZ')===key)||null}
+function previousContext(customer){const item=latestForCustomer(customer);if(!item)return null;const a=item.analysis||{};return {date:item.date,title:a.title||item.title,executive:a.executive,decisions:a.decisions,openPoints:a.openPoints,tasks:a.tasks,numbers:a.numbers,customerRequests:a.customerRequests,hopiPosition:a.hopiPosition,risks:a.risks,followUp:a.followUp}}
+function saveCurrentMeeting(){if(!state.analysis)return;const h=history();const id=state.currentId||String(Date.now());state.currentId=id;const item={id,date:Date.now(),customer:$('customerName')?.value.trim()||'',email:$('emailTo')?.value.trim()||'',title:state.analysis.title||'Meeting',analysis:state.analysis,transcript:state.transcript};const idx=h.findIndex(x=>x.id===id);if(idx>=0)h[idx]=item;else h.unshift(item);saveHistory(h);renderPromises();renderCustomers()}
 
-function startDemo(){
-  resetMeeting();state.demo=true;state.speakerCount=3;$('meetingName').value='MINIT BOHEMIA';
-  state.turns=[
-    {time:72,text:'Od září očekáváme nižší objem přeprav a potřebujeme potvrdit, jak se to promítne do ceny.',speakerIndex:0},
-    {time:115,text:'Za HOPI připravíme nový sjednocený ceník po potvrzení forecastu.',speakerIndex:1},
-    {time:180,text:'Penny Dobřany a Smiřice vyhodnotíme samostatně, protože nejde o standardní multi-stop.',speakerIndex:2},
-    {time:280,text:'MINIT dodá forecast do 13. 8. a HOPI připraví kalkulaci do 14. 8.',speakerIndex:0}
-  ];
-  state.transcript=state.turns.map(x=>x.text).join(' ');
-  state.analysis={executive:'MINIT očekává nižší objem přeprav. Finální cenový model bude uzavřen až po potvrzení forecastu a samostatném vyhodnocení nestandardních tras.',decisions:['MINIT dodá forecast.','HOPI připraví nový sjednocený ceník.','Penny Dobřany + Smiřice se vyhodnotí samostatně.'],tasks:[{task:'Dodat forecast',owner:'David',deadline:'13. 8.'},{task:'Připravit kalkulaci',owner:'Roman',deadline:'14. 8.'},{task:'Vyhodnotit PD + SM',owner:'Josef',deadline:'15. 8.'}],requests:['Transparentní cenový model.','Garance kvality služeb.','Flexibilita při změně objemů.'],hopi:['Udržet dlouhodobé partnerství a nabídnout stabilní a konkurenceschopné řešení.'],risks:['Nižší objem může zhoršit ekonomiku distribučního modelu.'],followup:['Po potvrzení forecastu uzavřít cenu a provozní model.'],recommendation:'Neuzavírat finální cenový závazek před potvrzením forecastu. Nejprve objem → provozní model → závazek → cena.',source:state.turns.map(x=>x.text)};
-  state.names={0:'David',1:'Roman',2:'Josef'};showView('processView');setTimeout(()=>{renderSpeakers();showView('speakersView')},700)
-}
+function fillList(id,items,empty='Bez zachycených bodů.'){const el=$(id);if(!el)return;el.innerHTML='';(items?.length?items:[empty]).forEach(x=>{const li=document.createElement('li');li.textContent=x;el.appendChild(li)})}
+function renderBrief(){const a=state.analysis;if(!a)return;$('briefTitle').textContent=a.title||'Meeting Brief';$('executiveSummary').textContent=a.executive||'Bez hlavního závěru.';fillList('decisionsList',a.decisions);fillList('openPointsList',a.openPoints,'Žádné otevřené body.');fillList('promisesList',a.myPromises,'Žádný jednoznačný závazek HOPI.');fillList('changesList',a.changes,'Bez dostupného předchozího meetingu nebo bez změn.');fillList('numbersList',a.numbers,'Bez důležitých čísel.');fillList('requestsList',a.customerRequests);fillList('hopiList',a.hopiPosition);fillList('risksList',a.risks,'Bez zachyceného rizika.');fillList('followupList',a.followUp);$('recommendation').textContent=a.recommendation||'Bez interního doporučení.';const tt=$('tasksTable');tt.innerHTML='';if(!a.tasks?.length)tt.innerHTML='<div class="task-row"><div>Bez konkrétního úkolu</div><div class="task-owner">—</div><div class="task-deadline">—</div></div>';else a.tasks.forEach(t=>{const row=document.createElement('div');row.className='task-row';row.innerHTML=`<div>${esc(t.task)}<div class="task-side ${esc(t.side||'UNKNOWN')}">${t.side==='HOPI'?'HOPI':t.side==='CUSTOMER'?'Zákazník':'Neurčeno'}</div></div><div class="task-owner">${esc(t.owner||'doplnit')}</div><div class="task-deadline">${esc(t.deadline||'doplnit')}</div>`;tt.appendChild(row)});const src=$('sourceTranscript');src.innerHTML=`<div class="source-block"><p>${esc(state.transcript||'Přepis není dostupný.')}</p></div>`;saveCurrentMeeting();showView('briefView')}
 
-$('startBtn').onclick=startMeeting;$('stopBtn').onclick=stopMeeting;$('demoBtn').onclick=startDemo;
-$('addSpeakerBtn').onclick=()=>{collectNames();state.speakerCount=Math.min(6,state.speakerCount+1);renderSpeakers()};
-$('removeSpeakerBtn').onclick=()=>{collectNames();state.speakerCount=Math.max(1,state.speakerCount-1);renderSpeakers()};
-$('applySpeakersBtn').onclick=applySpeakers;$('showBriefBtn').onclick=renderBrief;$('quickMailBtn').onclick=()=>{renderBrief();setTimeout(openMail,50)};
-$('briefBackBtn').onclick=()=>showView('doneView');$('emailBtn').onclick=openMail;$('copyBtn').onclick=copySummary;$('shareBtn').onclick=shareSummary;$('pdfBtn').onclick=()=>window.print();
-$('settingsTopBtn').onclick=()=>showView('settingsView');$('clearHistoryBtn').onclick=()=>{if(confirm('Opravdu smazat historii meetingů v tomto zařízení?')){localStorage.removeItem(STORAGE_KEY);renderHistory();toast('Historie byla smazána.')}};
-document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab==='summary'?'summaryTab':'sourceTab').classList.add('active')});
+function plainSummary(){const a=state.analysis||{};const out=[`${a.title||'Meeting'} – Meeting Brief`,dateLabel(),'','HLAVNÍ ZÁVĚR',a.executive||''];const add=(title,arr)=>{if(arr?.length){out.push('',title,...arr.map(x=>'• '+x))}};add('DOHODNUTO',a.decisions);add('OTEVŘENÉ BODY',a.openPoints);if(a.tasks?.length){out.push('','ÚKOLY',...a.tasks.map(t=>`• ${t.task} — ${t.owner||t.side||'doplnit'} — ${t.deadline||'doplnit'}`))}add('CO JSEM SLÍBIL',a.myPromises);add('DŮLEŽITÁ ČÍSLA',a.numbers);add('POŽADAVKY ZÁKAZNÍKA',a.customerRequests);add('POZICE HOPI',a.hopiPosition);add('RIZIKA',a.risks);add('FOLLOW-UP',a.followUp);return out.join('\n')}
+function customerEmail(){const a=state.analysis||{};const customer=$('customerName')?.value.trim()||'';const out=['Dobrý den,','',`děkuji za dnešní jednání${customer?' se společností '+customer:''}. Níže zasílám stručné shrnutí:`,''];if(a.decisions?.length){out.push('Dohodnuto:');a.decisions.forEach(x=>out.push('• '+x));out.push('')}if(a.tasks?.length){out.push('Další kroky:');a.tasks.forEach(t=>out.push(`• ${t.task}${t.owner?' – '+t.owner:''}${t.deadline?' – '+t.deadline:''}`));out.push('')}if(a.openPoints?.length){out.push('Otevřené body:');a.openPoints.forEach(x=>out.push('• '+x));out.push('')}out.push('Děkuji a přeji hezký den.','','S pozdravem');return out.join('\n')}
+function openMail(){if(!state.analysis)return toast('Nejdřív vytvoř Meeting Brief.');const to=$('emailTo')?.value.trim()||'';location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent('Shrnutí jednání – '+(state.analysis.title||'Meeting'))}&body=${encodeURIComponent(customerEmail())}`}
+async function copySummary(){try{await navigator.clipboard.writeText(plainSummary());toast('Shrnutí zkopírováno.')}catch{toast('Kopírování se nepodařilo.')}}
+async function shareSummary(){if(navigator.share){try{await navigator.share({title:state.analysis?.title||'Meeting Brief',text:plainSummary()})}catch{}}else copySummary()}
 
-renderHistory();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+function doneMap(){try{return JSON.parse(localStorage.getItem(DONE_KEY)||'{}')}catch{return{}}}
+function setPromiseDone(key,value){const d=doneMap();d[key]=value;localStorage.setItem(DONE_KEY,JSON.stringify(d));renderPromises()}
+function renderPromises(){const box=$('promiseList');if(!box)return;const d=doneMap();const rows=[];history().forEach(m=>(m.analysis?.myPromises||[]).forEach((p,i)=>rows.push({key:`${m.id}:${i}:${p}`,text:p,customer:m.customer,title:m.title,date:m.date,done:!!d[`${m.id}:${i}:${p}`]})));$('promiseCount').textContent=String(rows.filter(x=>!x.done).length);box.innerHTML='';if(!rows.length){box.innerHTML='<div class="empty">Zatím tu nejsou žádné zachycené závazky.</div>';return}rows.sort((a,b)=>Number(a.done)-Number(b.done)||b.date-a.date).forEach(r=>{const c=document.createElement('div');c.className='compact-card promise-item';c.innerHTML=`<input type="checkbox" ${r.done?'checked':''}><div><strong>${esc(r.text)}</strong><small>${esc(r.customer||'Bez zákazníka')} · ${esc(dateLabel(r.date))}</small></div>`;c.querySelector('input').onchange=e=>setPromiseDone(r.key,e.target.checked);box.appendChild(c)})}
+function renderCustomers(){const box=$('customerHistory');if(!box)return;const h=history();$('historyCount').textContent=String(h.length);box.innerHTML='';if(!h.length){box.innerHTML='<div class="empty">Zatím tu nejsou žádné uložené meetingy.</div>';return}const groups={};h.forEach(m=>{const k=m.customer||'Bez zákazníka';(groups[k]||(groups[k]=[])).push(m)});Object.entries(groups).forEach(([customer,items])=>{const g=document.createElement('div');g.className='customer-group';g.innerHTML=`<h3>${esc(customer)} <small>(${items.length})</small></h3><div class="compact-list"></div>`;const list=g.querySelector('.compact-list');items.forEach(item=>{const c=document.createElement('div');c.className='compact-card';c.innerHTML=`<strong>${esc(item.title||'Meeting')}</strong><small>${esc(dateLabel(item.date))}</small><p>${esc(item.analysis?.executive||'')}</p>`;c.onclick=()=>loadHistory(item);list.appendChild(c)});box.appendChild(g)})}
+function loadHistory(item){resetMeeting();state.currentId=item.id;state.analysis=item.analysis;state.transcript=item.transcript||'';$('customerName').value=item.customer||'';$('emailTo').value=item.email||'';renderBrief()}
+
+$('startBtn').onclick=startMeeting;$('importantBtn').onclick=addImportantMarker;$('briefBackBtn').onclick=()=>showView('homeView');$('emailBtn').onclick=openMail;$('copyBtn').onclick=copySummary;$('shareBtn').onclick=shareSummary;$('pdfBtn').onclick=()=>window.print();$('settingsTopBtn').onclick=()=>showView('settingsView');$('clearHistoryBtn').onclick=()=>{if(confirm('Opravdu smazat historii meetingů v tomto zařízení?')){localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(DONE_KEY);renderPromises();renderCustomers();toast('Historie byla smazána.')}};document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab==='summary'?'summaryTab':'sourceTab').classList.add('active')});
+renderPromises();renderCustomers();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+
+window.HOPI_APP={state,showView,toast,finishRecording,renderBrief,previousContext,history};
