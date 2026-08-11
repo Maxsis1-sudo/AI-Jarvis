@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: cd server && npm install && rm -rf public && mkdir public && cp ../index.html ../styles.css ../app.js ../outlook.js ../config.js ../manifest.webmanifest ../icon.svg ../sw.js public/
+    buildCommand: cd server && npm install && rm -rf public && mkdir public && cp ../index.html ../styles.css ../app.js ../api-mode.js ../manifest.webmanifest ../icon.svg ../sw.js public/
     startCommand: cd server && npm start
     healthCheckPath: /health
     autoDeployTrigger: commit
