@@ -49,7 +49,37 @@
   }
 
   const stop=byId('stopBtn');
-  if(stop)stop.onclick=async()=>{stop.disabled=true;try{await processMeeting()}catch(err){console.error(err);HOPI_APP.toast(`Zpracování se nepodařilo: ${err.message||err}`);HOPI_APP.showView('homeView')}finally{stop.disabled=false}};
+  if(stop){
+    let stopping=false;
+    const stopNow=async event=>{
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      if(stopping)return;
+      stopping=true;
+      stop.disabled=true;
+      stop.setAttribute('aria-busy','true');
+      // Give immediate visual feedback on iOS before any MediaRecorder work.
+      HOPI_APP.showView('processView');
+      setStep('processUpload',false,'Ukončuji nahrávku…');
+      try{
+        await processMeeting();
+      }catch(err){
+        console.error(err);
+        HOPI_APP.toast(`Zpracování se nepodařilo: ${err.message||err}`);
+        HOPI_APP.showView('homeView');
+      }finally{
+        stopping=false;
+        stop.disabled=false;
+        stop.removeAttribute('aria-busy');
+      }
+    };
+    stop.onclick=stopNow;
+    stop.addEventListener('touchend',stopNow,{passive:false});
+    stop.addEventListener('pointerup',event=>{
+      if(event.pointerType==='touch')return;
+      stopNow(event);
+    });
+  }
 
   const settings=byId('settingsView');
   if(settings&&!byId('connectionCard')){
