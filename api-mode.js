@@ -1,10 +1,11 @@
 (() => {
   const API_URL_KEY='hopi-api-base-v1';
+  const DEFAULT_API_BASE='https://hopi-meeting-assistant.onrender.com';
   const REQUEST_TIMEOUT_MS=5*60*1000;
   const byId=id=>document.getElementById(id);
   const sameOriginApi=()=>location.hostname.endsWith('.onrender.com')||location.hostname==='localhost';
   const normalizeBase=v=>String(v||'').trim().replace(/\/+$/,'');
-  const apiBase=()=>sameOriginApi()?'':normalizeBase(localStorage.getItem(API_URL_KEY));
+  const apiBase=()=>sameOriginApi()?'':normalizeBase(localStorage.getItem(API_URL_KEY)||DEFAULT_API_BASE);
   const endpoint=path=>`${apiBase()}${path}`;
 
   function setMode(text){if(byId('modeLabel'))byId('modeLabel').textContent=text}
@@ -58,7 +59,6 @@
       stopping=true;
       stop.disabled=true;
       stop.setAttribute('aria-busy','true');
-      // Give immediate visual feedback on iOS before any MediaRecorder work.
       HOPI_APP.showView('processView');
       setStep('processUpload',false,'Ukončuji nahrávku…');
       try{
@@ -87,5 +87,5 @@
     byId('connectionTestBtn').onclick=async()=>{const ok=await checkHealth(true);byId('connectionText').textContent=ok?'✓ Připraveno':'Služba není připravená.'};
   }
   checkHealth();setTimeout(checkHealth,5000);
-  window.HOPI_PROCESSING={checkHealth};
+  window.HOPI_PROCESSING={checkHealth,status:()=>({base:apiBase()})};
 })();
