@@ -116,9 +116,18 @@ ZÁSADNÍ PRAVIDLA:
 - Nic nevymýšlej. Nejasné vlastníky a termíny nech prázdné.
 - Nepokoušej se rozpoznávat řečníky podle hlasu.
 - Jméno osoby použij pouze pokud bylo výslovně řečeno v textu.
-- Každý bod max 120 znaků; executive a recommendation max 220 znaků.
-- Otevřené body nejsou totéž co rozhodnutí: patří sem věci bez finální shody nebo čekající na potvrzení.
-- "myPromises" jsou pouze závazky HOPI / naše strana / já jako KAM. Pokud to není jasné, nedávej je tam.
+- Piš jako zkušený Key Account Manager: stručně, konkrétně, bez omáčky.
+- Každý bod max 95 znaků; executive max 180 znaků; recommendation max 180 znaků.
+- Každou informaci zařaď jen do jedné nejvhodnější sekce. Minimalizuj duplicity mezi decisions, tasks, openPoints, customerRequests a followUp.
+- Decisions = pouze skutečně potvrzené dohody nebo závěry.
+- OpenPoints = pouze nevyřešené otázky, čekající potvrzení nebo body bez shody.
+- Tasks = pouze konkrétní akce. Každý úkol formuluj slovesem a vyplň kdo a kdy jen pokud to zaznělo.
+- "myPromises" jsou pouze jasné závazky HOPI / KAM. Pokud to není jisté, vynech je.
+- Numbers = jen čísla důležitá pro obchod, cenu, objemy, SLA, termíny, kapacitu nebo finance; vždy přidej krátký kontext.
+- customerRequests = co zákazník skutečně požaduje, ne obecné téma diskuse.
+- hopiPosition = naše stanovisko, omezení, nabídka nebo podmínky.
+- risks = konkrétní obchodní nebo provozní rizika, ne obecné fráze.
+- recommendation = jeden krátký interní doporučený další krok pro KAM.
 - Úkoly označ side pouze HOPI, CUSTOMER nebo UNKNOWN.
 - Pokud je dostupný minulý meeting stejného zákazníka, changes shrň pouze skutečné změny oproti minulému stavu.
 - Časové značky "Důležité" znamenají, že uživatel během nahrávání označil okolí této části za prioritní; zvýrazni tamní fakta, pokud jsou v přepisu dohledatelná.
@@ -150,7 +159,7 @@ Vrať POUZE validní JSON:
 }
 
 function normalizeSummary(summary) {
-  const list = (value, maxItems = 6, maxChars = 120) => {
+  const list = (value, maxItems = 5, maxChars = 95) => {
     if (!Array.isArray(value)) return [];
     const out = []; const seen = new Set();
     for (const item of value) {
@@ -164,11 +173,11 @@ function normalizeSummary(summary) {
     return out;
   };
   const tasks = Array.isArray(summary?.tasks) ? summary.tasks.slice(0, 8).map(t => ({
-    task: compactText(t?.task, 100), owner: compactText(t?.owner, 50), deadline: compactText(t?.deadline, 40), side: ['HOPI','CUSTOMER','UNKNOWN'].includes(String(t?.side)) ? String(t.side) : 'UNKNOWN'
+    task: compactText(t?.task, 95), owner: compactText(t?.owner, 50), deadline: compactText(t?.deadline, 40), side: ['HOPI','CUSTOMER','UNKNOWN'].includes(String(t?.side)) ? String(t.side) : 'UNKNOWN'
   })).filter(t => t.task) : [];
   return {
     title: compactText(summary?.title, 90) || 'Meeting',
-    executive: compactText(summary?.executive, 220),
+    executive: compactText(summary?.executive, 180),
     decisions: list(summary?.decisions),
     openPoints: list(summary?.openPoints),
     tasks,
@@ -179,7 +188,7 @@ function normalizeSummary(summary) {
     numbers: list(summary?.numbers),
     followUp: list(summary?.followUp),
     changes: list(summary?.changes),
-    recommendation: compactText(summary?.recommendation, 220)
+    recommendation: compactText(summary?.recommendation, 180)
   };
 }
 
