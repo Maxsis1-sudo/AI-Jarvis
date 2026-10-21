@@ -200,5 +200,5 @@ function parseJsonObject(text) {
 }
 function parseOptionalJson(value) { try { return value ? JSON.parse(value) : null; } catch { return null; } }
 
-app.use(express.static(publicDir, { extensions: ['html'], maxAge: '1h' }));
+app.use(express.static(publicDir, { extensions: ['html'], maxAge: 0, etag: true, setHeaders: res => { res.setHeader('Cache-Control','no-store, max-age=0'); } }));
 app.listen(port, '0.0.0.0', () => console.log(`HOPI Meeting Assistant listening on port ${port}`));
