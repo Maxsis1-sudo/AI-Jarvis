@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
-  <link rel="stylesheet" href="styles.css?v=stopfix6" />
+  <link rel="stylesheet" href="styles.css?v=stopfix61" />
   <title>HOPI Meeting Assistant</title>
   <style>
     .simple-header{height:84px;padding:0 20px;border-bottom:1px solid #edf1ee;background:#fff}.simple-header .logo{width:54px;height:54px}.simple-header .brand strong{font-size:20px}
@@ -32,7 +32,7 @@
   </header>
 
   <section id="homeView" class="view active">
-    <div class="ready-line"><span class="ready-dot"></span><span id="modeLabel">Připraveno</span></div>
+    <div class="ready-line"><span class="ready-dot"></span><span id="modeLabel">Připraveno</span><small style="margin-left:auto;color:#7b877f;font-weight:700">v6.1</small></div>
     <div class="home-card">
       <h1>Nový meeting</h1>
       <p class="intro">Nahraj jednání. Po ukončení dostaneš stručný Meeting Brief, otevřené body, úkoly, důležitá čísla a follow-up.</p>
@@ -50,7 +50,7 @@
       <strong>Nahrávání probíhá…</strong><p>Mluv přirozeně. AI po skončení vytáhne jen podstatné věci.</p>
       <button id="importantBtn" class="secondary record-important">★ Označit jako důležité</button>
       <div id="markerCount" class="marker-count">0 označených momentů</div>
-      <button id="stopBtn" class="stop-round">■</button><span class="stop-label">Ukončit nahrávání</span>
+      <button id="stopBtn" type="button" class="stop-round" onclick="window.stopMeetingNow && window.stopMeetingNow(event)" ontouchstart="window.stopMeetingNow && window.stopMeetingNow(event)">■</button><span class="stop-label">Ukončit nahrávání</span>
       <details class="transcript-details"><summary>Kontrolní živý přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
     </div>
   </section>
@@ -90,8 +90,8 @@
   </nav>
 </main>
 <div id="toast" class="toast"></div>
-<script src="app.js?v=stopfix6"></script>
-<script src="production.js?v=stopfix6"></script>
-<script src="api-mode.js?v=stopfix6"></script>
+<script src="app.js?v=stopfix61"></script>
+<script src="production.js?v=stopfix61"></script>
+<script src="api-mode.js?v=stopfix61"></script>
 </body>
 </html>
