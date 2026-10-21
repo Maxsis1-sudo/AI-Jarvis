@@ -254,8 +254,8 @@ function renderCustomers(){
 }
 function loadHistory(item){resetMeeting();state.currentId=item.id;state.analysis=item.analysis;state.transcript=item.transcript||'';$('customerName').value=item.customer||'';$('emailTo').value=item.email||'';renderBrief()}
 
+window.stopMeeting=stopMeeting;
 $('startBtn').onclick=startMeeting;
-$('stopBtn').onclick=stopMeeting;
 $('importantBtn').onclick=addImportantMarker;
 $('briefBackBtn').onclick=()=>showView('homeView');
 $('emailBtn').onclick=openMail;$('copyBtn').onclick=copySummary;$('shareBtn').onclick=shareSummary;$('pdfBtn').onclick=()=>window.print();
@@ -266,3 +266,5 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelect
 
 renderPromises();renderCustomers();
 fetch(API_BASE+'/health',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(d?.ok&&d?.aiConfigured)$('modeLabel').textContent='Připraveno';else $('modeLabel').textContent='Zpracování není připravené';}).catch(()=>{$('modeLabel').textContent='Služba se připravuje…';});
+
+const jsReady=$('jsReady');if(jsReady){jsReady.textContent='JS READY · v7.1';jsReady.style.color='#087d3d';}
