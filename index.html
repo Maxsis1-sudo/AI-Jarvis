@@ -21,6 +21,8 @@
     .task-side{font-size:10px;font-weight:900;border-radius:999px;padding:3px 8px;background:#eef3ef;color:#52645a;display:inline-block;margin-top:5px}.task-side.HOPI{background:#e5f5eb;color:#087d3d}.task-side.CUSTOMER{background:#fff3df;color:#9b6200}
     .compact-list{display:grid;gap:10px}.compact-card{border:1px solid #e3ebe5;border-radius:18px;padding:14px;background:#fff}.compact-card strong{display:block;margin-bottom:5px}.compact-card small{color:#718078}.customer-group{margin-bottom:18px}.customer-group h3{margin:0 0 10px}.promise-item{display:flex;gap:10px;align-items:flex-start}.promise-item input{margin-top:3px}.empty{padding:24px;text-align:center;color:#7c877f}
     .bottom-nav{grid-template-columns:repeat(4,1fr)}.bottom-nav .nav-btn{font-size:10px}
+    .brief-meta{font-size:11px;color:#728078;margin:0 0 12px}.brief-hero{padding:18px 18px 16px!important;border-radius:18px!important;background:linear-gradient(180deg,#f1faf4,#fff)!important;border:1px solid #d5eadc!important}.brief-hero h3{font-size:20px!important;color:#153e24!important;margin:4px 0 8px!important}.brief-hero p{font-size:15px!important;line-height:1.55!important;font-weight:700}.section-kicker{font-size:9px;font-weight:950;letter-spacing:.12em;color:#789083;margin-bottom:5px}.brief-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.brief-card{border:1px solid #e1e9e3;border-radius:17px;padding:15px;background:#fff;margin-top:12px}.brief-card h3{font-size:14px;color:#143e23;margin:0 0 9px}.brief-card ul{margin:0;padding-left:18px}.brief-card li{font-size:12px;line-height:1.5;margin:6px 0}.decision-card{background:#f4faf6}.number-card{background:#f8faf8}.action-card{border-color:#cde5d5;background:#fbfefc}.open{background:#fffaf0!important}.risk-card{background:#fff7f5;border-color:#f1d8d2}.section-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.brief-count{font-size:10px;font-weight:900;background:#e8f5ec;color:#087d3d;border-radius:999px;padding:5px 8px}.tasks-table{display:grid;gap:8px}.task-row{grid-template-columns:minmax(0,1.5fr) .8fr .8fr!important;padding:10px 0!important}.task-row>div:first-child{font-weight:800}.task-owner,.task-deadline{font-size:10px}.secondary-grid{margin-top:0}
+    @media(max-width:560px){.brief-grid{grid-template-columns:1fr}.secondary-grid{grid-template-columns:1fr}.brief-hero p{font-size:14px!important}}
     @media(max-width:430px){.simple-header{height:80px}.simple-header .logo{width:50px;height:50px}.simple-header .brand strong{font-size:18px}.home-card h1{font-size:35px}}
   </style>
 </head>
@@ -32,7 +34,7 @@
   </header>
 
   <section id="homeView" class="view active">
-    <div class="ready-line"><span class="ready-dot"></span><span id="modeLabel">Připraveno</span><small id="jsReady" style="margin-left:auto;color:#b42318;font-weight:700">JS NOT READY · v7.1</small></div>
+    <div class="ready-line"><span class="ready-dot"></span><span id="modeLabel">Připraveno</span><small id="jsReady" style="margin-left:auto;color:#b42318;font-weight:700">JS NOT READY · v7.2</small></div>
     <div class="home-card">
       <h1>Nový meeting</h1>
       <p class="intro">Nahraj jednání. Po ukončení dostaneš stručný Meeting Brief, otevřené body, úkoly, důležitá čísla a follow-up.</p>
@@ -61,18 +63,27 @@
     <div class="brief-top"><button id="briefBackBtn" class="link-btn">‹ Zpět</button><strong id="briefTitle">Meeting Brief</strong><button id="shareBtn" class="icon-btn">↗</button></div>
     <div class="tabs"><button class="tab active" data-tab="summary">SHRNUTÍ</button><button class="tab" data-tab="source">PŘEPIS</button></div>
     <div id="summaryTab" class="tab-panel active">
-      <section class="brief-section main-conclusion"><h3>✓ Hlavní závěr</h3><p id="executiveSummary"></p></section>
-      <section class="brief-section"><h3>● Dohodnuto</h3><ul id="decisionsList"></ul></section>
-      <section class="brief-section open"><h3>○ Otevřené body</h3><ul id="openPointsList"></ul></section>
-      <section class="brief-section"><h3>● Úkoly</h3><div id="tasksTable" class="tasks-table"></div></section>
-      <section class="brief-section promises"><h3>★ Co jsem slíbil</h3><ul id="promisesList"></ul></section>
-      <section class="brief-section changes" id="changesSection"><h3>↔ Změny od minula</h3><ul id="changesList"></ul></section>
-      <section class="brief-section"><h3>● Důležitá čísla</h3><ul id="numbersList"></ul></section>
-      <section class="brief-section"><h3>● Požadavky zákazníka</h3><ul id="requestsList"></ul></section>
-      <section class="brief-section"><h3>● Pozice HOPI</h3><ul id="hopiList"></ul></section>
-      <section class="brief-section"><h3>● Rizika</h3><ul id="risksList"></ul></section>
-      <section class="brief-section internal"><h3>! Interní AI pohled</h3><p id="recommendation"></p></section>
-      <section class="brief-section"><h3>✉ Follow-up</h3><ul id="followupList"></ul></section>
+      <div class="brief-meta" id="briefMeta"></div>
+      <section class="brief-section main-conclusion brief-hero"><div class="section-kicker">EXECUTIVE SUMMARY</div><h3>Hlavní závěr</h3><p id="executiveSummary"></p></section>
+
+      <div class="brief-grid">
+        <section class="brief-card decision-card"><div class="section-kicker">01 · ROZHODNUTÍ</div><h3>Dohodnuto</h3><ul id="decisionsList"></ul></section>
+        <section class="brief-card number-card"><div class="section-kicker">02 · ČÍSLA</div><h3>Klíčové hodnoty</h3><ul id="numbersList"></ul></section>
+      </div>
+
+      <section class="brief-card action-card"><div class="section-kicker">03 · AKCE</div><div class="section-head"><h3>Další kroky</h3><span id="taskCountBadge" class="brief-count"></span></div><div id="tasksTable" class="tasks-table"></div></section>
+      <section class="brief-card open"><div class="section-kicker">04 · OTEVŘENÉ BODY</div><h3>Co zůstává dořešit</h3><ul id="openPointsList"></ul></section>
+
+      <div class="brief-grid secondary-grid">
+        <section class="brief-card"><div class="section-kicker">ZÁKAZNÍK</div><h3>Požadavky zákazníka</h3><ul id="requestsList"></ul></section>
+        <section class="brief-card"><div class="section-kicker">HOPI</div><h3>Naše pozice</h3><ul id="hopiList"></ul></section>
+      </div>
+
+      <section class="brief-card promises"><div class="section-kicker">ZÁVAZKY</div><h3>Co jsme přislíbili</h3><ul id="promisesList"></ul></section>
+      <section class="brief-card changes" id="changesSection"><div class="section-kicker">KONTEXT</div><h3>Změny od minula</h3><ul id="changesList"></ul></section>
+      <section class="brief-card risk-card"><div class="section-kicker">POZOR</div><h3>Rizika</h3><ul id="risksList"></ul></section>
+      <section class="brief-card internal"><div class="section-kicker">INTERNĚ</div><h3>Doporučení pro KAM</h3><p id="recommendation"></p></section>
+      <section class="brief-card"><div class="section-kicker">FOLLOW-UP</div><h3>Navržený follow-up</h3><ul id="followupList"></ul></section>
     </div>
     <div id="sourceTab" class="tab-panel"><div id="sourceTranscript" class="source-transcript"></div></div>
     <div class="brief-actions"><button id="copyBtn" class="secondary">Kopírovat</button><button id="emailBtn" class="primary">Odeslat e-mail</button><button id="pdfBtn" class="secondary">Uložit PDF</button></div>
@@ -90,6 +101,6 @@
   </nav>
 </main>
 <div id="toast" class="toast"></div>
-<script src="app.js?v=7.1"></script>
+<script src="app.js?v=7.2"></script>
 </body>
 </html>
