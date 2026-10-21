@@ -205,6 +205,8 @@ function renderBrief(){
   const a=state.analysis;if(!a)return;
   $('briefTitle').textContent=a.title||'Meeting Brief';
   $('executiveSummary').textContent=a.executive||'Bez hlavního závěru.';
+  if($('briefMeta')) $('briefMeta').textContent=[($('customerName')?.value.trim()||'Bez zákazníka'),dateLabel()].join(' · ');
+  if($('taskCountBadge')) $('taskCountBadge').textContent=(a.tasks?.length||0)+' úkolů';
   fillList('decisionsList',a.decisions);fillList('openPointsList',a.openPoints,'Žádné otevřené body.');
   fillList('promisesList',a.myPromises,'Žádný jednoznačný závazek HOPI.');
   fillList('changesList',a.changes,'Bez dostupného předchozího meetingu nebo bez změn.');
@@ -213,7 +215,7 @@ function renderBrief(){
   $('recommendation').textContent=a.recommendation||'Bez interního doporučení.';
   const tt=$('tasksTable');tt.innerHTML='';
   if(!a.tasks?.length)tt.innerHTML='<div class="task-row"><div>Bez konkrétního úkolu</div><div class="task-owner">—</div><div class="task-deadline">—</div></div>';
-  else a.tasks.forEach(t=>{const row=document.createElement('div');row.className='task-row';row.innerHTML='<div>'+esc(t.task)+'<div class="task-side '+esc(t.side||'UNKNOWN')+'">'+(t.side==='HOPI'?'HOPI':t.side==='CUSTOMER'?'Zákazník':'Neurčeno')+'</div></div><div class="task-owner">'+esc(t.owner||'doplnit')+'</div><div class="task-deadline">'+esc(t.deadline||'doplnit')+'</div>';tt.appendChild(row)});
+  else a.tasks.forEach((t,i)=>{const row=document.createElement('div');row.className='task-row';row.innerHTML='<div><span style="color:#87958c;font-size:10px;margin-right:6px">'+String(i+1).padStart(2,'0')+'</span>'+esc(t.task)+'<div class="task-side '+esc(t.side||'UNKNOWN')+'">'+(t.side==='HOPI'?'HOPI':t.side==='CUSTOMER'?'Zákazník':'Neurčeno')+'</div></div><div class="task-owner">'+esc(t.owner||'—')+'</div><div class="task-deadline">'+esc(t.deadline||'—')+'</div>';tt.appendChild(row)});
   $('sourceTranscript').innerHTML='<div class="source-block"><p>'+esc(state.transcript||'Přepis není dostupný.')+'</p></div>';
   saveCurrentMeeting(); renderPromises(); renderCustomers(); showView('briefView');
 }
@@ -267,4 +269,4 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelect
 renderPromises();renderCustomers();
 fetch(API_BASE+'/health',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(d?.ok&&d?.aiConfigured)$('modeLabel').textContent='Připraveno';else $('modeLabel').textContent='Zpracování není připravené';}).catch(()=>{$('modeLabel').textContent='Služba se připravuje…';});
 
-const jsReady=$('jsReady');if(jsReady){jsReady.textContent='JS READY · v7.1';jsReady.style.color='#087d3d';}
+const jsReady=$('jsReady');if(jsReady){jsReady.textContent='JS READY · v7.2';jsReady.style.color='#087d3d';}
