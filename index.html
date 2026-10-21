@@ -10,14 +10,14 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=stopfix6" />
   <title>HOPI Meeting Assistant</title>
   <style>
     .simple-header{height:84px;padding:0 20px;border-bottom:1px solid #edf1ee;background:#fff}.simple-header .logo{width:54px;height:54px}.simple-header .brand strong{font-size:20px}
     #homeView{padding:22px 16px}.home-card{background:#fff;border:1px solid #e7eee9;border-radius:26px;padding:22px;box-shadow:0 16px 38px rgba(18,54,32,.08)}
     .home-card h1{font-size:38px;letter-spacing:-1.2px;margin:4px 0 10px}.home-card .intro{color:#6f7b73;line-height:1.55;margin-bottom:22px}.home-field{margin:16px 0}.home-field input{font-size:16px;padding:17px;border-radius:17px}
     .ready-line{display:flex;align-items:center;gap:9px;color:#087d3d;font-size:13px;font-weight:800;margin-bottom:18px}.ready-dot{width:10px;height:10px;border-radius:50%;background:#0a984a;box-shadow:0 0 0 5px rgba(0,132,61,.08)}
-    .record-important{margin-top:22px}.marker-count{font-size:12px;color:#6f7b73;margin-top:8px}.brief-section.open{background:#fffaf0;border-color:#f3dfac}.brief-section.promises{background:#f1f9f4;border-color:#cfe8d8}.brief-section.changes{background:#f5f7fb;border-color:#dfe5ef}
+    .record-important{margin-top:22px}.marker-count{font-size:12px;color:#6f7b73;margin-top:8px}.recording-ui .stop-round{position:fixed!important;left:50%!important;bottom:calc(28px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;z-index:9999!important;width:84px!important;height:84px!important;touch-action:manipulation!important;pointer-events:auto!important}.recording-ui .stop-label{position:fixed;left:50%;bottom:calc(8px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9999;background:#fff;padding:2px 8px;border-radius:8px}.recording-ui #recordView{padding-bottom:150px}.brief-section.open{background:#fffaf0;border-color:#f3dfac}.brief-section.promises{background:#f1f9f4;border-color:#cfe8d8}.brief-section.changes{background:#f5f7fb;border-color:#dfe5ef}
     .task-side{font-size:10px;font-weight:900;border-radius:999px;padding:3px 8px;background:#eef3ef;color:#52645a;display:inline-block;margin-top:5px}.task-side.HOPI{background:#e5f5eb;color:#087d3d}.task-side.CUSTOMER{background:#fff3df;color:#9b6200}
     .compact-list{display:grid;gap:10px}.compact-card{border:1px solid #e3ebe5;border-radius:18px;padding:14px;background:#fff}.compact-card strong{display:block;margin-bottom:5px}.compact-card small{color:#718078}.customer-group{margin-bottom:18px}.customer-group h3{margin:0 0 10px}.promise-item{display:flex;gap:10px;align-items:flex-start}.promise-item input{margin-top:3px}.empty{padding:24px;text-align:center;color:#7c877f}
     .bottom-nav{grid-template-columns:repeat(4,1fr)}.bottom-nav .nav-btn{font-size:10px}
@@ -90,8 +90,8 @@
   </nav>
 </main>
 <div id="toast" class="toast"></div>
-<script src="app.js"></script>
-<script src="production.js"></script>
-<script src="api-mode.js"></script>
+<script src="app.js?v=stopfix6"></script>
+<script src="production.js?v=stopfix6"></script>
+<script src="api-mode.js?v=stopfix6"></script>
 </body>
 </html>
