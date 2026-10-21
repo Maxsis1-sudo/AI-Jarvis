@@ -5,7 +5,7 @@ const DONE_KEY = 'hopi-kam-promises-done-v1';
 
 const state = { recorder:null, stream:null, recognition:null, chunks:[], startedAt:0, timerId:null, recording:false, transcript:'', interim:'', analysis:null, currentId:null, markers:[], audioBlob:null };
 
-function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id)?.classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));window.scrollTo({top:0,behavior:'smooth'});if(id==='tasksView')renderPromises();if(id==='customersView')renderCustomers()}
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id)?.classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));const nav=document.querySelector('.bottom-nav');if(nav)nav.style.display=(id==='recordView'||id==='processView')?'none':'grid';document.body.classList.toggle('recording-ui',id==='recordView');window.scrollTo({top:0,behavior:'smooth'});if(id==='tasksView')renderPromises();if(id==='customersView')renderCustomers()}
 function toast(msg){const t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),3200)}
 function esc(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]))}
 function wc(t){return (String(t||'').trim().match(/\S+/g)||[]).length}
