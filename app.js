@@ -67,32 +67,40 @@ function loadHistory(item){resetMeeting();state.currentId=item.id;state.analysis
 
 $('startBtn').onclick=startMeeting;$('importantBtn').onclick=addImportantMarker;
 const stopButton=$('stopBtn');
+let stopInProgress=false;
+window.stopMeetingNow=async function stopMeetingNow(event){
+  event?.preventDefault?.();event?.stopPropagation?.();
+  if(stopInProgress)return;
+  stopInProgress=true;
+  if(stopButton){stopButton.disabled=true;stopButton.textContent='…';}
+  showView('processView');
+  const upload=$('processUpload');if(upload)upload.innerHTML='◌ <span>Ukončuji nahrávku…</span>';
+  try{
+    const audio=await finishRecording();
+    if(!audio?.size)throw new Error('Audio záznam je prázdný.');
+    if(!window.HOPI_PROCESSING?.processAudio)throw new Error('Zpracování se ještě nenačetlo. Obnov aplikaci.');
+    await window.HOPI_PROCESSING.processAudio(audio);
+  }catch(err){
+    console.error(err);
+    toast('Zpracování se nepodařilo: '+(err?.message||err));
+    showView('homeView');
+  }finally{
+    stopInProgress=false;
+    if(stopButton){stopButton.disabled=false;stopButton.textContent='■';}
+  }
+};
 if(stopButton){
-  let stopInProgress=false;
-  const handleStop=async event=>{
-    event?.preventDefault?.();event?.stopPropagation?.();
-    if(stopInProgress||!state.recording)return;
-    stopInProgress=true;
-    stopButton.disabled=true;
-    showView('processView');
-    const upload=$('processUpload');if(upload)upload.innerHTML='◌ <span>Ukončuji nahrávku…</span>';
-    try{
-      if(!window.HOPI_PROCESSING?.processMeeting)throw new Error('Zpracování se ještě nenačetlo. Obnov aplikaci.');
-      await window.HOPI_PROCESSING.processMeeting();
-    }catch(err){
-      console.error(err);
-      toast('Zpracování se nepodařilo: '+(err?.message||err));
-      showView('homeView');
-    }finally{
-      stopInProgress=false;
-      stopButton.disabled=false;
-    }
-  };
-  stopButton.type='button';
-  stopButton.addEventListener('pointerdown',handleStop,{passive:false});
-  stopButton.addEventListener('click',handleStop);
+  stopButton.addEventListener('pointerup',window.stopMeetingNow,{passive:false});
 }
 $('briefBackBtn').onclick=()=>showView('homeView');$('emailBtn').onclick=openMail;$('copyBtn').onclick=copySummary;$('shareBtn').onclick=shareSummary;$('pdfBtn').onclick=()=>window.print();$('settingsTopBtn').onclick=()=>showView('settingsView');$('clearHistoryBtn').onclick=()=>{if(confirm('Opravdu smazat historii meetingů v tomto zařízení?')){localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(DONE_KEY);renderPromises();renderCustomers();toast('Historie byla smazána.')}};document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab==='summary'?'summaryTab':'sourceTab').classList.add('active')});
-renderPromises();renderCustomers();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+renderPromises();renderCustomers();
+window.addEventListener('load',async()=>{
+  if('serviceWorker'in navigator){
+    try{const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()))}catch{}
+  }
+  if('caches'in window){
+    try{const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)))}catch{}
+  }
+});
 
 window.HOPI_APP={state,showView,toast,finishRecording,renderBrief,previousContext,history};
