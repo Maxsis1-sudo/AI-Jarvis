@@ -32,7 +32,7 @@
   </header>
 
   <section id="homeView" class="view active">
-    <div class="ready-line"><span class="ready-dot"></span><span id="modeLabel">Připraveno</span><small style="margin-left:auto;color:#7b877f;font-weight:700">v6.1</small></div>
+    <div class="ready-line"><span class="ready-dot"></span><span id="modeLabel">Připraveno</span><small style="margin-left:auto;color:#7b877f;font-weight:700">v7.0</small></div>
     <div class="home-card">
       <h1>Nový meeting</h1>
       <p class="intro">Nahraj jednání. Po ukončení dostaneš stručný Meeting Brief, otevřené body, úkoly, důležitá čísla a follow-up.</p>
@@ -50,8 +50,8 @@
       <strong>Nahrávání probíhá…</strong><p>Mluv přirozeně. AI po skončení vytáhne jen podstatné věci.</p>
       <button id="importantBtn" class="secondary record-important">★ Označit jako důležité</button>
       <div id="markerCount" class="marker-count">0 označených momentů</div>
-      <button id="stopBtn" type="button" class="stop-round" onclick="window.stopMeetingNow && window.stopMeetingNow(event)" ontouchstart="window.stopMeetingNow && window.stopMeetingNow(event)">■</button><span class="stop-label">Ukončit nahrávání</span>
-      <details class="transcript-details"><summary>Kontrolní živý přepis <span id="wordCount">0 slov</span></summary><div id="liveTranscript" class="transcript">Čekám na první slova…</div></details>
+      <button id="stopBtn" type="button" class="primary big" style="margin-top:28px;background:#b42318;box-shadow:none">■ Ukončit a zpracovat</button>
+      <div id="recordStatus" class="info-box" style="margin-top:14px">Nahrávání je aktivní.</div>
     </div>
   </section>
 
@@ -90,8 +90,6 @@
   </nav>
 </main>
 <div id="toast" class="toast"></div>
-<script src="app.js?v=stopfix61"></script>
-<script src="production.js?v=stopfix61"></script>
-<script src="api-mode.js?v=stopfix61"></script>
+<script src="app.js?v=7.0"></script>
 </body>
 </html>
