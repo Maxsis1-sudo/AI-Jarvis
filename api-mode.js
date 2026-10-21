@@ -49,43 +49,11 @@
     }finally{clearTimeout(timer)}
   }
 
-  const stop=byId('stopBtn');
-  if(stop){
-    let stopping=false;
-    const stopNow=async event=>{
-      event?.preventDefault?.();
-      event?.stopPropagation?.();
-      if(stopping)return;
-      stopping=true;
-      stop.disabled=true;
-      stop.setAttribute('aria-busy','true');
-      HOPI_APP.showView('processView');
-      setStep('processUpload',false,'Ukončuji nahrávku…');
-      try{
-        await processMeeting();
-      }catch(err){
-        console.error(err);
-        HOPI_APP.toast(`Zpracování se nepodařilo: ${err.message||err}`);
-        HOPI_APP.showView('homeView');
-      }finally{
-        stopping=false;
-        stop.disabled=false;
-        stop.removeAttribute('aria-busy');
-      }
-    };
-    stop.onclick=stopNow;
-    stop.addEventListener('touchend',stopNow,{passive:false});
-    stop.addEventListener('pointerup',event=>{
-      if(event.pointerType==='touch')return;
-      stopNow(event);
-    });
-  }
-
   const settings=byId('settingsView');
   if(settings&&!byId('connectionCard')){
     const card=document.createElement('div');card.id='connectionCard';card.className='settings-card';card.innerHTML=`<h3>↔ Připravenost</h3><p id="connectionText">Kontroluji…</p><button id="connectionTestBtn" class="primary">Otestovat spojení</button>`;settings.insertBefore(card,byId('clearHistoryBtn'));
     byId('connectionTestBtn').onclick=async()=>{const ok=await checkHealth(true);byId('connectionText').textContent=ok?'✓ Připraveno':'Služba není připravená.'};
   }
   checkHealth();setTimeout(checkHealth,5000);
-  window.HOPI_PROCESSING={checkHealth,status:()=>({base:apiBase()})};
+  window.HOPI_PROCESSING={checkHealth,processMeeting,status:()=>({base:apiBase()})};
 })();
