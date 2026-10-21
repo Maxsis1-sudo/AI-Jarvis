@@ -17,7 +17,30 @@ function resetMeeting(){try{state.recognition?.abort()}catch{};try{state.stream?
 
 async function startMeeting(){resetMeeting();const customer=$('customerName')?.value.trim()||'';$('recordTitle').textContent=customer||'Meeting';try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('Mikrofon není dostupný.');state.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});if(!window.MediaRecorder)throw new Error('Nahrávání audia není podporované.');const types=['audio/mp4','audio/webm;codecs=opus','audio/webm'];const mime=types.find(t=>MediaRecorder.isTypeSupported?.(t));const opts={audioBitsPerSecond:64000};if(mime)opts.mimeType=mime;try{state.recorder=new MediaRecorder(state.stream,opts)}catch{state.recorder=mime?new MediaRecorder(state.stream,{mimeType:mime}):new MediaRecorder(state.stream)}state.recorder.ondataavailable=e=>{if(e.data?.size)state.chunks.push(e.data)};state.recorder.start(1000);state.recording=true;state.startedAt=Date.now();state.timerId=setInterval(()=>{$('timer').textContent=fmtTime(elapsed())},500);if(SpeechRecognition)startRecognition();else $('liveTranscript').textContent='Živý přepis není dostupný. Finální přepis vznikne po ukončení meetingu.';showView('recordView')}catch(e){try{state.stream?.getTracks().forEach(t=>t.stop())}catch{};toast(e.message||'Nepodařilo se spustit mikrofon.')}}
 function startRecognition(){const r=new SpeechRecognition();r.lang='cs-CZ';r.continuous=true;r.interimResults=true;r.maxAlternatives=1;r.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const text=e.results[i][0].transcript.trim();if(e.results[i].isFinal&&text)state.transcript+=(state.transcript?' ':'')+text;else if(text)interim+=(interim?' ':'')+text}state.interim=interim;const all=[state.transcript,interim].filter(Boolean).join(' ');$('liveTranscript').textContent=all||'Čekám na první slova…';$('wordCount').textContent=`${wc(all)} slov`};r.onerror=e=>{if(!['no-speech','aborted'].includes(e.error))console.warn(e.error)};r.onend=()=>{if(state.recording){try{r.start()}catch{}}};try{r.start();state.recognition=r}catch{}}
-async function finishRecording(){state.recording=false;clearInterval(state.timerId);try{state.recognition?.stop()}catch{};const mime=state.recorder?.mimeType||state.chunks?.[0]?.type||'audio/webm';if(state.recorder&&state.recorder.state!=='inactive')await new Promise(resolve=>{state.recorder.addEventListener('stop',resolve,{once:true});state.recorder.stop()});state.stream?.getTracks().forEach(t=>t.stop());state.audioBlob=new Blob(state.chunks,{type:mime});return state.audioBlob}
+async function finishRecording(){
+  if(!state.recording&&state.audioBlob?.size)return state.audioBlob;
+  state.recording=false;
+  clearInterval(state.timerId);state.timerId=null;
+  try{state.recognition?.abort?.()}catch{}
+  const recorder=state.recorder;
+  const mime=recorder?.mimeType||state.chunks?.[0]?.type||'audio/webm';
+  if(recorder&&recorder.state!=='inactive'){
+    try{recorder.requestData?.()}catch{}
+    await new Promise(resolve=>{
+      let done=false;
+      const finish=()=>{if(done)return;done=true;clearTimeout(timeout);resolve()};
+      const timeout=setTimeout(finish,1500);
+      try{recorder.addEventListener('stop',finish,{once:true})}catch{}
+      try{recorder.stop()}catch{finish()}
+    });
+  }
+  try{state.stream?.getTracks().forEach(t=>t.stop())}catch{}
+  state.stream=null;
+  await new Promise(r=>setTimeout(r,100));
+  state.audioBlob=new Blob(state.chunks||[],{type:mime});
+  if(!state.audioBlob.size)throw new Error('Nahrávku se nepodařilo dokončit.');
+  return state.audioBlob
+}
 function addImportantMarker(){if(!state.recording)return;state.markers.push(Math.round(elapsed()));updateMarkerCount();toast(`Označeno ${fmtTime(state.markers[state.markers.length-1])}`)}
 function updateMarkerCount(){if($('markerCount'))$('markerCount').textContent=`${state.markers.length} označených momentů`}
 
@@ -42,7 +65,34 @@ function renderPromises(){const box=$('promiseList');if(!box)return;const d=done
 function renderCustomers(){const box=$('customerHistory');if(!box)return;const h=history();$('historyCount').textContent=String(h.length);box.innerHTML='';if(!h.length){box.innerHTML='<div class="empty">Zatím tu nejsou žádné uložené meetingy.</div>';return}const groups={};h.forEach(m=>{const k=m.customer||'Bez zákazníka';(groups[k]||(groups[k]=[])).push(m)});Object.entries(groups).forEach(([customer,items])=>{const g=document.createElement('div');g.className='customer-group';g.innerHTML=`<h3>${esc(customer)} <small>(${items.length})</small></h3><div class="compact-list"></div>`;const list=g.querySelector('.compact-list');items.forEach(item=>{const c=document.createElement('div');c.className='compact-card';c.innerHTML=`<strong>${esc(item.title||'Meeting')}</strong><small>${esc(dateLabel(item.date))}</small><p>${esc(item.analysis?.executive||'')}</p>`;c.onclick=()=>loadHistory(item);list.appendChild(c)});box.appendChild(g)})}
 function loadHistory(item){resetMeeting();state.currentId=item.id;state.analysis=item.analysis;state.transcript=item.transcript||'';$('customerName').value=item.customer||'';$('emailTo').value=item.email||'';renderBrief()}
 
-$('startBtn').onclick=startMeeting;$('importantBtn').onclick=addImportantMarker;$('briefBackBtn').onclick=()=>showView('homeView');$('emailBtn').onclick=openMail;$('copyBtn').onclick=copySummary;$('shareBtn').onclick=shareSummary;$('pdfBtn').onclick=()=>window.print();$('settingsTopBtn').onclick=()=>showView('settingsView');$('clearHistoryBtn').onclick=()=>{if(confirm('Opravdu smazat historii meetingů v tomto zařízení?')){localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(DONE_KEY);renderPromises();renderCustomers();toast('Historie byla smazána.')}};document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab==='summary'?'summaryTab':'sourceTab').classList.add('active')});
+$('startBtn').onclick=startMeeting;$('importantBtn').onclick=addImportantMarker;
+const stopButton=$('stopBtn');
+if(stopButton){
+  let stopInProgress=false;
+  const handleStop=async event=>{
+    event?.preventDefault?.();event?.stopPropagation?.();
+    if(stopInProgress||!state.recording)return;
+    stopInProgress=true;
+    stopButton.disabled=true;
+    showView('processView');
+    const upload=$('processUpload');if(upload)upload.innerHTML='◌ <span>Ukončuji nahrávku…</span>';
+    try{
+      if(!window.HOPI_PROCESSING?.processMeeting)throw new Error('Zpracování se ještě nenačetlo. Obnov aplikaci.');
+      await window.HOPI_PROCESSING.processMeeting();
+    }catch(err){
+      console.error(err);
+      toast('Zpracování se nepodařilo: '+(err?.message||err));
+      showView('homeView');
+    }finally{
+      stopInProgress=false;
+      stopButton.disabled=false;
+    }
+  };
+  stopButton.type='button';
+  stopButton.addEventListener('pointerdown',handleStop,{passive:false});
+  stopButton.addEventListener('click',handleStop);
+}
+$('briefBackBtn').onclick=()=>showView('homeView');$('emailBtn').onclick=openMail;$('copyBtn').onclick=copySummary;$('shareBtn').onclick=shareSummary;$('pdfBtn').onclick=()=>window.print();$('settingsTopBtn').onclick=()=>showView('settingsView');$('clearHistoryBtn').onclick=()=>{if(confirm('Opravdu smazat historii meetingů v tomto zařízení?')){localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(DONE_KEY);renderPromises();renderCustomers();toast('Historie byla smazána.')}};document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab==='summary'?'summaryTab':'sourceTab').classList.add('active')});
 renderPromises();renderCustomers();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
 window.HOPI_APP={state,showView,toast,finishRecording,renderBrief,previousContext,history};
