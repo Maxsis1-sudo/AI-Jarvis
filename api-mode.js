@@ -14,10 +14,13 @@
   function setStep(id,done,text){const el=byId(id);if(el)el.innerHTML=`${done?'✓':'◌'} <span>${text}</span>`}
 
   async function processMeeting(){
+    const audio=await HOPI_APP.finishRecording();
+    return processAudio(audio);
+  }
+
+  async function processAudio(audio){
     const state=HOPI_APP.state;
     HOPI_APP.showView('processView');
-    setStep('processUpload',false,'Ukončuji nahrávku…');
-    const audio=await HOPI_APP.finishRecording();
     if(!audio?.size)throw new Error('Audio záznam je prázdný.');
     setStep('processUpload',true,'Nahrávka připravena');
     setStep('processTranscript',false,'Přepisuji meeting…');
@@ -55,5 +58,5 @@
     byId('connectionTestBtn').onclick=async()=>{const ok=await checkHealth(true);byId('connectionText').textContent=ok?'✓ Připraveno':'Služba není připravená.'};
   }
   checkHealth();setTimeout(checkHealth,5000);
-  window.HOPI_PROCESSING={checkHealth,processMeeting,status:()=>({base:apiBase()})};
+  window.HOPI_PROCESSING={checkHealth,processMeeting,processAudio,status:()=>({base:apiBase()})};
 })();
